@@ -1,0 +1,100 @@
+﻿{% extends 'base.html' %}
+{% block content %}
+<style>
+.dashboard-hero { background: linear-gradient(135deg, #eff5ff 0%, #f4f9ff 100%); border-radius: 12px; padding: 22px; }
+.metric-card { border-left: 4px solid #0b6ffe; }
+.quick-actions a { width: 100%; text-align: left; }
+.log-card { box-shadow: 0 8px 18px rgba(40, 84, 144, 0.14); }
+</style>
+
+<div class="dashboard-hero mb-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+    <div>
+      <h2 class="mb-1">Welcome back, {{ user.username }}</h2>
+      <p class="text-muted">Your personalized study insights in one place.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <div class="card p-3 metric-card">
+        <div class="text-muted small">Current streak</div>
+        <div class="h5 mb-0">{{ streak }} days</div>
+      </div>
+      <div class="card p-3 metric-card" style="border-color:#28a745;">
+        <div class="text-muted small">Today</div>
+        <div class="h5 mb-0">{{ total_today }} min</div>
+      </div>
+      <div class="card p-3 metric-card" style="border-color:#17a2b8;">
+        <div class="text-muted small">Total</div>
+        <div class="h5 mb-0">{{ total_all }} min</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row gy-4">
+  <div class="col-lg-5">
+    <div class="card log-card p-4">
+      <h4>Add Study Log</h4>
+      <form action="{{ url_for('add_study') }}" method="post">
+        <div class="mb-3">
+          <label class="form-label" for="subject">Subject</label>
+          <select id="subject" name="subject" class="form-select" required>
+            {% for subj in ['DBMS', 'Operating Systems', 'Computer Networks', 'Data Structures'] %}
+              <option>{{ subj }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="topic">Topic</label>
+          <input id="topic" name="topic" class="form-control" placeholder="e.g., Binary Trees">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="minutes">Minutes</label>
+          <input id="minutes" type="number" name="minutes" value="60" min="1" class="form-control" required>
+        </div>
+        <button class="btn btn-success btn-lg">Add Study Entry</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card log-card p-4">
+      <h4>Quick Actions</h4>
+      <div class="row quick-actions g-2">
+        <div class="col-sm-6"><a class="btn btn-outline-primary" href="{{ url_for('subject_planner') }}">Subject Planner</a></div>
+        <div class="col-sm-6"><a class="btn btn-outline-secondary" href="{{ url_for('topic_generator') }}">AI Topic Generator</a></div>
+        <div class="col-sm-6"><a class="btn btn-outline-warning" href="{{ url_for('ai_chat') }}">AI Doubt Solver</a></div>
+        <div class="col-sm-6"><a class="btn btn-outline-info" href="{{ url_for('focus_mode') }}">Focus Mode</a></div>
+        <div class="col-sm-12"><a class="btn btn-outline-success" href="{{ url_for('send_reminder') }}">Send WhatsApp Reminder</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-4 log-card">
+  <div class="card-header bg-white">
+    <h5 class="mb-0">Today's Study History</h5>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-striped mb-0 align-middle">
+      <thead>
+        <tr><th>Date</th><th>Subject</th><th>Topic</th><th>Minutes</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for row in today_logs %}
+        <tr>
+          <td>{{ row.created_at.split('T')[0] }}</td>
+          <td>{{ row.subject }}</td>
+          <td>{{ row.topic }}</td>
+          <td>{{ row.minutes }}</td>
+          <td><a class="btn btn-sm btn-danger" href="{{ url_for('delete_log', log_id=row.id) }}">Delete</a></td>
+        </tr>
+        {% endfor %}
+        {% if not today_logs %}
+        <tr><td colspan="5" class="text-center text-muted">No study logs yet for today.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

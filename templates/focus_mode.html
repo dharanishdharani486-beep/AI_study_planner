@@ -1,0 +1,27 @@
+﻿{% extends 'base.html' %}
+{% block content %}
+<h2>Focus Mode</h2>
+<form method="post" class="mb-3">
+  <div class="mb-2"><label>Topic</label><input class="form-control" name="topic" value="{{ topic }}" required></div>
+  <div class="mb-2"><label>Duration (minutes)</label><input type="number" class="form-control" name="duration" value="{{ duration }}" min="15" max="120" required></div>
+  <button class="btn btn-success">Start Timer</button>
+</form>
+
+{% if topic %}
+  <div class="alert alert-info">Focus on <strong>{{ topic }}</strong> for {{ duration }} minutes.</div>
+  <div class="border p-3">
+    <h5>Timer</h5>
+    <div id="timer" style="font-size:2rem;">{{ duration }}:00</div>
+  </div>
+  <script>
+    let totalSec = {{ duration }} * 60;
+    function tick() {
+      if (totalSec <= 0) { alert('Time is up! Well done.'); return; }
+      totalSec -= 1;
+      let min = Math.floor(totalSec/60); let sec = totalSec%60;
+      document.getElementById('timer').innerText = `${min.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+    }
+    setInterval(tick, 1000);
+  </script>
+{% endif %}
+{% endblock %}

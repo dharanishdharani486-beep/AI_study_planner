@@ -1,0 +1,23 @@
+﻿{% extends 'base.html' %}
+{% block content %}
+<h2>AI Topic Generator</h2>
+<form method="post">
+  <div class="mb-3"><label>Subject</label>
+    <select class="form-select" name="subject" required>
+      {% for subj in subjects %}<option {% if selected_subject == subj %}selected{% endif %}>{{ subj }}</option>{% endfor %}
+    </select>
+  </div>
+  <button class="btn btn-primary">Generate Topics</button>
+</form>
+
+{% if generated %}
+<div class="card mt-4"><div class="card-body">
+  <h5>Suggested topics for {{ selected_subject }}</h5>
+  <pre style="white-space: pre-wrap;">{{ generated }}</pre>
+  <form method="post" action="{{ url_for('ai_notes') }}">
+    <div class="mb-3"><label>Choose topic for notes</label><input class="form-control" name="topic" placeholder="Type one of the suggested topics" required></div>
+    <button class="btn btn-success">Generate Notes</button>
+  </form>
+</div></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,47 @@
+﻿{% extends 'base.html' %}
+{% block content %}
+<style>
+.login-bg {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2a95ff 0%, #2964f5 56%, #1a3d8b 100%);
+  color: #ffffff;
+}
+.card-login {
+  width: 100%;
+  max-width: 430px;
+  border-radius: 14px;
+  box-shadow: 0 18px 46px rgba(1, 50, 115, 0.35);
+  backdrop-filter: blur(6px);
+}
+.card-login .form-label { color: #4f87d6; font-weight: 600; }
+.card-login .btn-brand { background: #004ee2; border: none; }
+</style>
+
+<div class="login-bg">
+  <div class="card card-login p-4">
+    <div class="card-body">
+      <h3 class="card-title text-center mb-3">Welcome back</h3>
+      <p class="text-center text-muted mb-4">Log in to access your study dashboard and progress analytics</p>
+
+      <form method="post" novalidate>
+        <div class="mb-3">
+          <label class="form-label" for="username">Username</label>
+          <input id="username" name="username" class="form-control" placeholder="Enter your username" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="password">Password</label>
+          <input id="password" type="password" name="password" class="form-control" placeholder="Enter your password" required>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <small><a class="link-light" href="#">Forgot password?</a></small>
+          <a class="link-light" href="{{ url_for('signup') }}">Create account</a>
+        </div>
+        <button class="btn btn-brand btn-lg w-100 text-white">Sign In</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,6 @@
+﻿{% extends 'base.html' %}
+{% block content %}
+<h2>AI Study Notes for: {{ topic }}</h2>
+<pre style="white-space: pre-wrap;">{{ notes }}</pre>
+<a class="btn btn-secondary" href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+{% endblock %}
