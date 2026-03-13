@@ -1,0 +1,6 @@
+.env
+__pycache__/
+*.pyc
+models.txt
+models_utf8.txt
+studycoach.db
