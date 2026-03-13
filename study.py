@@ -1,17 +1,20 @@
-﻿from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 import sqlite3
 import os
 from datetime import datetime, date, timedelta
+import google.generativeai as genai
+from dotenv import load_dotenv
 
-# Load environment variables from a .env file (optional; requires python-dotenv)
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+# Load environment variables from a .env file
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key')
+
+# Configure Gemini
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
 DB_PATH = os.path.join(os.path.dirname(__file__), 'studycoach.db')
 
 SUBJECTS = ['DBMS', 'Operating Systems', 'Computer Networks', 'Data Structures']
@@ -277,59 +280,16 @@ def subject_planner():
     return render_template('plan_subjects.html', subjects=SUBJECTS, profile=profile)
 
 
-def call_openai(prompt_text):
-    api_key = os.environ.get('OPENAI_API_KEY', '').strip()
-    if not api_key:
-        return 'OpenAI API key not set in OPENAI_API_KEY environment variable.'
-
-    if api_key.startswith('AIza'):
-        return ('Invalid API key type detected. You provided a Google API key, but OpenAI requires ' \
-                'a key from https://platform.openai.com/account/api-keys (format starts with sk-).')
-
-    import json
-    import urllib.request
-    import urllib.error
-
-    payload = json.dumps({
-        'model': 'gpt-4o-mini',
-        'prompt': prompt_text,
-        'temperature': 0.6,
-        'max_tokens': 400,
-    }).encode('utf-8')
-
-    req = urllib.request.Request(
-        'https://api.openai.com/v1/completions',
-        data=payload,
-        headers={
-            'Authorization': f'Bearer {api_key}',
-            'Content-Type': 'application/json',
-        },
-        method='POST'
-    )
+def call_gemini(prompt_text):
+    if not GEMINI_API_KEY or GEMINI_API_KEY == 'your_gemini_api_key_here':
+        return 'Gemini API key not set or invalid in .env file.'
 
     try:
-        with urllib.request.urlopen(req, timeout=20) as response:
-            resp_data = response.read().decode('utf-8')
-    except urllib.error.HTTPError as err:
-        try:
-            err_data = err.read().decode('utf-8')
-            err_json = json.loads(err_data)
-            err_msg = err_json.get('error', err_json)
-        except Exception:
-            err_msg = err.reason or str(err)
-        return f"OpenAI HTTP error {err.code}: {err_msg}"
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content(prompt_text)
+        return response.text.strip()
     except Exception as err:
-        return f"OpenAI request failed: {err}"
-
-    try:
-        data = json.loads(resp_data)
-    except Exception:
-        return 'Failed to parse response from OpenAI.'
-
-    if 'choices' not in data or not data['choices']:
-        return f"OpenAI response missing choices: {data}"
-
-    return data['choices'][0].get('text', '').strip()
+        return f"Gemini request failed: {err}"
 
 
 @app.route('/topic_generator', methods=['GET', 'POST'])
@@ -342,8 +302,8 @@ def topic_generator():
         if not selected_subject:
             flash('Select a subject first.', 'danger')
             return redirect(url_for('topic_generator'))
-        prompt = f"Generate 5 concise study topic suggestions for the subject {selected_subject}."
-        generated = call_openai(prompt)
+        prompt = f"Generate 5 concise study topic suggestions for the subject {selected_subject}. Return only the list of topics, one per line."
+        generated = call_gemini(prompt)
     return render_template('topic_generator.html', subjects=SUBJECTS, generated=generated, selected_subject=selected_subject)
 
 
@@ -354,8 +314,8 @@ def ai_notes():
     if not topic:
         flash('Select a topic first.', 'danger')
         return redirect(url_for('topic_generator'))
-    prompt = f"Create study notes for '{topic}' with definition, explanation, examples, key points, and practice questions."
-    notes = call_openai(prompt)
+    prompt = f"Create study notes for '{topic}' with definition, explanation, examples, key points, and practice questions. Format the output nicely with markdown if possible."
+    notes = call_gemini(prompt)
     return render_template('ai_notes.html', topic=topic, notes=notes)
 
 
@@ -367,7 +327,7 @@ def ai_chat():
     if request.method == 'POST':
         q = request.form.get('question')
         if q:
-            answer = call_openai(f"Q: {q}\nA:")
+            answer = call_gemini(f"Answer this study-related question: {q}")
             if not answer:
                 answer = 'No answer from AI.'
     return render_template('ai_chat.html', question=q, answer=answer)

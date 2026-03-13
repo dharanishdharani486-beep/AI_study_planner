@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block content %}
 <h2>AI Topic Generator</h2>
 <form method="post">
@@ -13,9 +13,24 @@
 {% if generated %}
 <div class="card mt-4"><div class="card-body">
   <h5>Suggested topics for {{ selected_subject }}</h5>
-  <pre style="white-space: pre-wrap;">{{ generated }}</pre>
+  <p class="text-muted small">Click on a topic below or type one in the box.</p>
+  <div class="mb-3">
+    {% set lines = generated.split('\n') %}
+    {% for line in lines %}
+      {% set clean_line = line.strip() %}
+      {% if clean_line %}
+        {% set display_text = clean_line[2:] if clean_line.startswith("- ") or clean_line.startswith("* ") else clean_line %}
+        <button type="button" class="btn btn-outline-primary btn-sm me-2 mb-2 topic-btn" onclick="document.getElementById('topic-input').value='{{ display_text | replace("'", "\\'") }}'">
+          {{ clean_line }}
+        </button>
+      {% endif %}
+    {% endfor %}
+  </div>
   <form method="post" action="{{ url_for('ai_notes') }}">
-    <div class="mb-3"><label>Choose topic for notes</label><input class="form-control" name="topic" placeholder="Type one of the suggested topics" required></div>
+    <div class="mb-3">
+      <label>Choose topic for notes</label>
+      <input class="form-control" id="topic-input" name="topic" placeholder="Type or click a topic above" required>
+    </div>
     <button class="btn btn-success">Generate Notes</button>
   </form>
 </div></div>

@@ -1,6 +1,13 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block content %}
 <h2>AI Study Notes for: {{ topic }}</h2>
-<pre style="white-space: pre-wrap;">{{ notes }}</pre>
-<a class="btn btn-secondary" href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+<div class="card shadow-sm mt-3">
+  <div class="card-body">
+    <div style="white-space: pre-wrap; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6;">{{ notes }}</div>
+  </div>
+</div>
+<div class="mt-4">
+  <a class="btn btn-secondary" href="{{ url_for('topic_generator') }}">Generate More</a>
+  <a class="btn btn-primary" href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+</div>
 {% endblock %}
