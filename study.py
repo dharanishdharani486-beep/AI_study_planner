@@ -12,6 +12,7 @@ try:
     load_dotenv(override=True)
 except ImportError:
     pass
+
 # Load environment variables from a .env file
 load_dotenv(override=True)
 
@@ -21,7 +22,28 @@ app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key')
 # Configure Gemini
 DB_PATH = os.path.join(os.path.dirname(__file__), 'studycoach.db')
 
-SUBJECTS = ['DBMS', 'Operating Systems', 'Computer Networks', 'Data Structures']
+SUBJECTS = [
+    'DBMS', 'Operating Systems', 'Computer Networks', 'Data Structures',
+    'Algorithms', 'Software Engineering', 'Artificial Intelligence',
+    'Machine Learning', 'Computer Architecture', 'Web Development',
+    'Cyber Security', 'Mathematics', 'Physics'
+]
+
+SUBJECT_TOPICS = {
+    'DBMS': ['Normalization', 'SQL Queries', 'Transactions & Concurrency', 'Relational Algebra', 'Indexing'],
+    'Operating Systems': ['Process Management', 'Memory Management', 'File Systems', 'Deadlocks', 'Threads'],
+    'Computer Networks': ['OSI Model', 'TCP/IP', 'Routing Algorithms', 'Network Security', 'Application Protocols'],
+    'Data Structures': ['Arrays & Linked Lists', 'Stacks & Queues', 'Trees & Graphs', 'Hashing', 'Heaps'],
+    'Algorithms': ['Sorting & Searching', 'Dynamic Programming', 'Greedy Algorithms', 'Graph Algorithms', 'Divide and Conquer'],
+    'Software Engineering': ['SDLC', 'Agile Methodologies', 'Software Testing', 'Design Patterns', 'Requirements'],
+    'Artificial Intelligence': ['Search Algorithms', 'Knowledge Representation', 'Machine Reasoning', 'Fuzzy Logic', 'NLP Basics'],
+    'Machine Learning': ['Supervised Learning', 'Unsupervised Learning', 'Neural Networks', 'Model Evaluation', 'SVM'],
+    'Computer Architecture': ['Instruction Set', 'Pipelining', 'Memory Hierarchy', 'I/O Organization', 'Multiprocessors'],
+    'Web Development': ['HTML & CSS', 'JavaScript & DOM', 'React Frontend', 'Node.js Backend', 'REST APIs'],
+    'Cyber Security': ['Cryptography', 'Network Security', 'Ethical Hacking', 'Malware Analysis', 'Web App Security'],
+    'Mathematics': ['Linear Algebra', 'Calculus', 'Probability & Statistics', 'Discrete Math', 'Differential Equations'],
+    'Physics': ['Mechanics', 'Thermodynamics', 'Electromagnetism', 'Quantum Physics', 'Optics']
+}
 
 
 def get_db_connection():
@@ -230,7 +252,8 @@ def dashboard():
 
     return render_template('dashboard.html', user=user, profile=profile,
                            today_logs=today_logs, total_today=total_today,
-                           total_all=total_all, streak=streak)
+                           total_all=total_all, streak=streak,
+                           subjects=SUBJECTS, subject_topics=SUBJECT_TOPICS)
 
 
 @app.route('/add_study', methods=['POST'])
