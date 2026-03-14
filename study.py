@@ -2,26 +2,23 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import sqlite3
 import os
 from datetime import datetime, date, timedelta
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 
 
 # Load environment variables from a .env file (optional; requires python-dotenv)
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(override=True)
 except ImportError:
     pass
 # Load environment variables from a .env file
-load_dotenv()
+load_dotenv(override=True)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
 # Configure Gemini
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
 DB_PATH = os.path.join(os.path.dirname(__file__), 'studycoach.db')
 
 SUBJECTS = ['DBMS', 'Operating Systems', 'Computer Networks', 'Data Structures']
@@ -288,12 +285,16 @@ def subject_planner():
 
 
 def call_gemini(prompt_text):
-    if not GEMINI_API_KEY or GEMINI_API_KEY == 'your_gemini_api_key_here':
+    api_key = os.environ.get('GEMINI_API_KEY')
+    if not api_key or api_key == 'your_gemini_api_key_here':
         return 'Gemini API key not set or invalid in .env file.'
 
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        response = model.generate_content(prompt_text)
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt_text
+        )
         return response.text.strip()
     except Exception as err:
         return f"Gemini request failed: {err}"
