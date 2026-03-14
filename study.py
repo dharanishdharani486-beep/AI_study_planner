@@ -5,6 +5,13 @@ from datetime import datetime, date, timedelta
 import google.generativeai as genai
 from dotenv import load_dotenv
 
+
+# Load environment variables from a .env file (optional; requires python-dotenv)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 # Load environment variables from a .env file
 load_dotenv()
 
