@@ -2,29 +2,48 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import sqlite3
 import os
 from datetime import datetime, date, timedelta
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 
 
 # Load environment variables from a .env file (optional; requires python-dotenv)
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(override=True)
 except ImportError:
     pass
+
 # Load environment variables from a .env file
-load_dotenv()
+load_dotenv(override=True)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
 # Configure Gemini
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
 DB_PATH = os.path.join(os.path.dirname(__file__), 'studycoach.db')
 
-SUBJECTS = ['DBMS', 'Operating Systems', 'Computer Networks', 'Data Structures']
+SUBJECTS = [
+    'DBMS', 'Operating Systems', 'Computer Networks', 'Data Structures',
+    'Algorithms', 'Software Engineering', 'Artificial Intelligence',
+    'Machine Learning', 'Computer Architecture', 'Web Development',
+    'Cyber Security', 'Mathematics', 'Physics'
+]
+
+SUBJECT_TOPICS = {
+    'DBMS': ['Normalization', 'SQL Queries', 'Transactions & Concurrency', 'Relational Algebra', 'Indexing'],
+    'Operating Systems': ['Process Management', 'Memory Management', 'File Systems', 'Deadlocks', 'Threads'],
+    'Computer Networks': ['OSI Model', 'TCP/IP', 'Routing Algorithms', 'Network Security', 'Application Protocols'],
+    'Data Structures': ['Arrays & Linked Lists', 'Stacks & Queues', 'Trees & Graphs', 'Hashing', 'Heaps'],
+    'Algorithms': ['Sorting & Searching', 'Dynamic Programming', 'Greedy Algorithms', 'Graph Algorithms', 'Divide and Conquer'],
+    'Software Engineering': ['SDLC', 'Agile Methodologies', 'Software Testing', 'Design Patterns', 'Requirements'],
+    'Artificial Intelligence': ['Search Algorithms', 'Knowledge Representation', 'Machine Reasoning', 'Fuzzy Logic', 'NLP Basics'],
+    'Machine Learning': ['Supervised Learning', 'Unsupervised Learning', 'Neural Networks', 'Model Evaluation', 'SVM'],
+    'Computer Architecture': ['Instruction Set', 'Pipelining', 'Memory Hierarchy', 'I/O Organization', 'Multiprocessors'],
+    'Web Development': ['HTML & CSS', 'JavaScript & DOM', 'React Frontend', 'Node.js Backend', 'REST APIs'],
+    'Cyber Security': ['Cryptography', 'Network Security', 'Ethical Hacking', 'Malware Analysis', 'Web App Security'],
+    'Mathematics': ['Linear Algebra', 'Calculus', 'Probability & Statistics', 'Discrete Math', 'Differential Equations'],
+    'Physics': ['Mechanics', 'Thermodynamics', 'Electromagnetism', 'Quantum Physics', 'Optics']
+}
 
 
 def get_db_connection():
@@ -41,7 +60,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            phone TEXT
+            email TEXT
         )
     ''')
     c.execute('''
@@ -121,14 +140,14 @@ def signup():
     if request.method == 'POST':
         username = request.form.get('username').strip()
         password = request.form.get('password').strip()
-        phone = request.form.get('phone').strip()
+        email = request.form.get('email', '').strip()
         if not username or not password:
             flash('Username and password are required.', 'danger')
             return render_template('signup.html')
         conn = get_db_connection()
         try:
-            conn.execute('INSERT INTO users (username, password, phone) VALUES (?, ?, ?)',
-                         (username, password, phone))
+            conn.execute('INSERT INTO users (username, password, email) VALUES (?, ?, ?)',
+                         (username, password, email))
             conn.commit()
             flash('Signup successful. Please log in.', 'success')
             return redirect(url_for('login'))
@@ -233,7 +252,8 @@ def dashboard():
 
     return render_template('dashboard.html', user=user, profile=profile,
                            today_logs=today_logs, total_today=total_today,
-                           total_all=total_all, streak=streak)
+                           total_all=total_all, streak=streak,
+                           subjects=SUBJECTS, subject_topics=SUBJECT_TOPICS)
 
 
 @app.route('/add_study', methods=['POST'])
@@ -288,12 +308,16 @@ def subject_planner():
 
 
 def call_gemini(prompt_text):
-    if not GEMINI_API_KEY or GEMINI_API_KEY == 'your_gemini_api_key_here':
+    api_key = os.environ.get('GEMINI_API_KEY')
+    if not api_key or api_key == 'your_gemini_api_key_here':
         return 'Gemini API key not set or invalid in .env file.'
 
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        response = model.generate_content(prompt_text)
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt_text
+        )
         return response.text.strip()
     except Exception as err:
         return f"Gemini request failed: {err}"
@@ -348,22 +372,36 @@ def focus_mode():
     return render_template('focus_mode.html', topic=topic, duration=duration)
 
 
-def send_whatsapp_reminder(user_id, recipient, subject, topic, minutes):
-    account_sid = os.environ.get('TWILIO_ACCOUNT_SID', '')
-    auth_token = os.environ.get('TWILIO_AUTH_TOKEN', '')
-    from_number = os.environ.get('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886')
+import smtplib
+from email.message import EmailMessage
 
-    if not (account_sid and auth_token and recipient):
+def send_email_reminder(user_id, recipient, subject, topic, minutes):
+    smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
+    smtp_port = int(os.environ.get('SMTP_PORT', 587))
+    smtp_user = os.environ.get('SMTP_USER', '')
+    smtp_password = os.environ.get('SMTP_PASSWORD', '')
+
+    if not (smtp_user and smtp_password and recipient):
         return False
 
-    from twilio.rest import Client
-    client = Client(account_sid, auth_token)
+    message = f"Hello! Today's Study Topic: {topic or subject}.\nGoal: {minutes} min.\nKeep your streak alive!"
+    
+    msg = EmailMessage()
+    msg.set_content(message)
+    msg['Subject'] = 'Your Study AI Reminder'
+    msg['From'] = smtp_user
+    msg['To'] = recipient
 
-    message = f"Hello {recipient}. Today's Study Topic: {topic or subject}. Goal {minutes} min. Keep your streak alive!"
-    to_number = f"whatsapp:{recipient}"
-
-    msg = client.messages.create(body=message, from_=from_number, to=to_number)
-    return msg.sid
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_user, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
 
 
 @app.route('/send_reminder')
@@ -380,17 +418,17 @@ def send_reminder():
     subject = profile['subjects'].split(',')[0] if profile['subjects'] else SUBJECTS[0]
     topic = "Review today's study focus"
     minutes = profile['daily_goal'] or 60
-    phone = user['phone'] or profile['phone'] if 'phone' in profile.keys() else None
+    email = user['email'] if 'email' in user.keys() else None
 
-    if not phone:
-        flash('Phone number missing; cannot send WhatsApp reminder.', 'danger')
+    if not email:
+        flash('Email address missing; cannot send email reminder.', 'danger')
         return redirect(url_for('dashboard'))
 
-    sid = send_whatsapp_reminder(user['id'], phone, subject, topic, minutes)
-    if sid:
-        flash('WhatsApp reminder sent!', 'success')
+    success = send_email_reminder(user['id'], email, subject, topic, minutes)
+    if success:
+        flash('Email reminder sent!', 'success')
     else:
-        flash('WhatsApp reminder could not be sent; configure Twilio credentials.', 'danger')
+        flash('Email reminder could not be sent; configure SMTP credentials.', 'danger')
     return redirect(url_for('dashboard'))
 
 

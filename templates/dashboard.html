@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block content %}
 <style>
 .dashboard-hero { background: linear-gradient(135deg, #eff5ff 0%, #f4f9ff 100%); border-radius: 12px; padding: 22px; }
@@ -37,15 +37,18 @@
       <form action="{{ url_for('add_study') }}" method="post">
         <div class="mb-3">
           <label class="form-label" for="subject">Subject</label>
-          <select id="subject" name="subject" class="form-select" required>
-            {% for subj in ['DBMS', 'Operating Systems', 'Computer Networks', 'Data Structures'] %}
-              <option>{{ subj }}</option>
+          <select id="subject" name="subject" class="form-select" required onchange="updateTopics()">
+            <option value="" disabled selected>Select a subject...</option>
+            {% for subj in subjects %}
+              <option value="{{ subj }}">{{ subj }}</option>
             {% endfor %}
           </select>
         </div>
         <div class="mb-3">
           <label class="form-label" for="topic">Topic</label>
-          <input id="topic" name="topic" class="form-control" placeholder="e.g., Binary Trees">
+          <select id="topic" name="topic" class="form-select" required>
+            <option value="" disabled selected>Select a subject first...</option>
+          </select>
         </div>
         <div class="mb-3">
           <label class="form-label" for="minutes">Minutes</label>
@@ -64,7 +67,7 @@
         <div class="col-sm-6"><a class="btn btn-outline-secondary" href="{{ url_for('topic_generator') }}">AI Topic Generator</a></div>
         <div class="col-sm-6"><a class="btn btn-outline-warning" href="{{ url_for('ai_chat') }}">AI Doubt Solver</a></div>
         <div class="col-sm-6"><a class="btn btn-outline-info" href="{{ url_for('focus_mode') }}">Focus Mode</a></div>
-        <div class="col-sm-12"><a class="btn btn-outline-success" href="{{ url_for('send_reminder') }}">Send WhatsApp Reminder</a></div>
+        <div class="col-sm-12"><a class="btn btn-outline-success" href="{{ url_for('send_reminder') }}">Send Email Reminder</a></div>
       </div>
     </div>
   </div>
@@ -84,7 +87,7 @@
         <tr>
           <td>{{ row.created_at.split('T')[0] }}</td>
           <td>{{ row.subject }}</td>
-          <td>{{ row.topic }}</td>
+          <td>{{ row.topic or '-' }}</td>
           <td>{{ row.minutes }}</td>
           <td><a class="btn btn-sm btn-danger" href="{{ url_for('delete_log', log_id=row.id) }}">Delete</a></td>
         </tr>
@@ -96,5 +99,28 @@
     </table>
   </div>
 </div>
+
+<script>
+  const subjectTopics = {{ subject_topics | tojson | safe }};
+  const subjectSelect = document.getElementById('subject');
+  const topicSelect = document.getElementById('topic');
+
+  function updateTopics() {
+    const selectedSubject = subjectSelect.value;
+    const topics = subjectTopics[selectedSubject] || [];
+    
+    topicSelect.innerHTML = '<option value="" disabled selected>Select a topic...</option>';
+    
+    topics.forEach(topic => {
+      const option = document.createElement('option');
+      option.value = topic;
+      option.textContent = topic;
+      topicSelect.appendChild(option);
+    });
+  }
+  
+  // Initialize on load just in case
+  updateTopics();
+</script>
 
 {% endblock %}
