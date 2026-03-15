@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+{% block page_styles %}
+<style>
+  .exam-wrap { display: grid; gap: 24px; }
+
+  .exam-add-card { padding: 28px; }
+  .exam-add-card h4 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.6rem;
+    letter-spacing: -0.04em;
+    margin-bottom: 6px;
+  }
+
+  .exam-list-card { padding: 0; overflow: hidden; }
+  .exam-list-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 22px 28px 16px;
+    border-bottom: 1px solid rgba(19,34,56,0.08);
+  }
+  .exam-list-head h5 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: -0.03em;
+    margin: 0;
+  }
+
+  .exam-item {
+    display: flex; align-items: center; gap: 16px;
+    padding: 18px 28px;
+    border-bottom: 1px solid rgba(19,34,56,0.06);
+    transition: background 140ms;
+  }
+  .exam-item:last-child { border-bottom: none; }
+  .exam-item:hover { background: rgba(13,124,102,0.03); }
+
+  .exam-countdown {
+    flex-shrink: 0;
+    width: 64px; height: 64px;
+    border-radius: 18px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .countdown-num  { font-size: 1.6rem; font-weight: 700; line-height: 1; }
+  .countdown-unit { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+
+  .days-urgent   { background: #ffe4e4; color: #b82222; }
+  .days-soon     { background: #fff1dc; color: #9a5a24; }
+  .days-upcoming { background: #def6ef; color: #0c6b5d; }
+  .days-past     { background: rgba(19,34,56,0.06); color: var(--muted); }
+
+  .exam-info { flex: 1; min-width: 0; }
+  .exam-name { font-weight: 700; font-size: 1.05rem; margin-bottom: 3px; }
+  .exam-meta { font-size: 0.85rem; color: var(--muted); }
+
+  .exam-type-badge {
+    display: inline-flex; padding: 6px 14px; border-radius: 999px;
+    font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .type-exam  { background: #e3f0ff; color: #275ea7; }
+  .type-test  { background: #fff1dc; color: #9a5a24; }
+  .type-board { background: #ffe4e4; color: #b82222; }
+  .type-quiz  { background: #def6ef; color: #0c6b5d; }
+
+  .exam-topics {
+    margin-top: 6px; font-size: 0.83rem; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 320px;
+  }
+
+  .empty-state {
+    padding: 40px 28px; text-align: center; color: var(--muted);
+  }
+  .empty-icon { font-size: 2.6rem; margin-bottom: 10px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="exam-wrap">
+
+  <div>
+    <h2 class="section-title mb-1">Exam Planner</h2>
+    <p class="text-muted">Schedule tests, exams, and board papers to stay ahead.</p>
+  </div>
+
+  <!-- Add exam form -->
+  <div class="shell-card exam-add-card">
+    <div class="card-kicker mb-1">Schedule an exam</div>
+    <h4>Add exam or test</h4>
+    <p class="text-muted mb-4">Track upcoming tests so the dashboard can show you a countdown.</p>
+    <form method="post">
+      <div class="row g-3">
+        <div class="col-md-5">
+          <label class="field-caption">Exam name</label>
+          <input name="name" class="form-control" placeholder="e.g. Mid-term Mathematics" required>
+        </div>
+        <div class="col-md-4">
+          <label class="field-caption">Subject</label>
+          <select name="subject" class="form-select" required>
+            <option value="" disabled selected>Pick subject...</option>
+            {% for subj in subjects %}
+            <option value="{{ subj }}">{{ subj }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="field-caption">Type</label>
+          <select name="exam_type" class="form-select">
+            <option value="test">Unit Test</option>
+            <option value="exam" selected>Exam</option>
+            <option value="board">Board Exam</option>
+            <option value="quiz">Quiz</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="field-caption">Exam date</label>
+          <input type="date" name="exam_date" class="form-control" min="{{ today }}" required>
+        </div>
+        <div class="col-md-5">
+          <label class="field-caption">Topics / Syllabus (optional)</label>
+          <input name="topics" class="form-control" placeholder="e.g. Ch 1–5, Trigonometry, Statistics">
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <button class="btn btn-brand w-100">Add Exam</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Upcoming exams -->
+  <div class="shell-card exam-list-card">
+    <div class="exam-list-head">
+      <h5>📅 Upcoming ({{ upcoming|length }})</h5>
+      {% if upcoming %}
+      <span class="text-muted" style="font-size:0.85rem;">Sorted by nearest date</span>
+      {% endif %}
+    </div>
+    {% if upcoming %}
+      {% for exam in upcoming %}
+      {% set days_away = ((exam.exam_date | string).replace('-','') | int) - (today.replace('-','') | int) %}
+      {% if today > exam.exam_date %}
+        {% set cd_class = 'days-past' %}
+        {% set days_label = 'today' %}
+      {% elif exam.exam_date == today %}
+        {% set cd_class = 'days-urgent' %}
+        {% set days_label = 'today' %}
+      {% elif days_away <= 3 %}
+        {% set cd_class = 'days-urgent' %}
+        {% set days_label = 'days' %}
+      {% elif days_away <= 7 %}
+        {% set cd_class = 'days-soon' %}
+        {% set days_label = 'days' %}
+      {% else %}
+        {% set cd_class = 'days-upcoming' %}
+        {% set days_label = 'days' %}
+      {% endif %}
+      <div class="exam-item">
+        <div class="exam-countdown {{ cd_class }}">
+          {% if exam.exam_date == today %}
+            <span class="countdown-num" style="font-size:1rem;">NOW</span>
+          {% else %}
+            <span class="countdown-num">{{ exam.exam_date }}</span>
+            <span class="countdown-unit">{{ days_label }}</span>
+          {% endif %}
+        </div>
+        <div class="exam-info">
+          <div class="exam-name">{{ exam.name }}</div>
+          <div class="exam-meta">{{ exam.subject }}</div>
+          {% if exam.topics %}
+          <div class="exam-topics">Topics: {{ exam.topics }}</div>
+          {% endif %}
+        </div>
+        <span class="exam-type-badge type-{{ exam.exam_type }}">{{ exam.exam_type }}</span>
+        <a href="{{ url_for('exam_delete', exam_id=exam.id) }}"
+           class="btn btn-sm btn-outline-danger ms-2" style="border-radius:999px;"
+           onclick="return confirm('Delete this exam?')">Delete</a>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">📖</div>
+        <div>No upcoming exams. Add one above to start tracking.</div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Past exams -->
+  {% if past %}
+  <div class="shell-card exam-list-card">
+    <div class="exam-list-head">
+      <h5>📂 Past Exams ({{ past|length }})</h5>
+    </div>
+    {% for exam in past %}
+    <div class="exam-item" style="opacity:0.65;">
+      <div class="exam-countdown days-past">
+        <span class="countdown-num" style="font-size:0.75rem;">{{ exam.exam_date }}</span>
+        <span class="countdown-unit">done</span>
+      </div>
+      <div class="exam-info">
+        <div class="exam-name" style="text-decoration:line-through;">{{ exam.name }}</div>
+        <div class="exam-meta">{{ exam.subject }}</div>
+      </div>
+      <span class="exam-type-badge type-{{ exam.exam_type }}">{{ exam.exam_type }}</span>
+      <a href="{{ url_for('exam_delete', exam_id=exam.id) }}"
+         class="btn btn-sm btn-outline-secondary ms-2" style="border-radius:999px;"
+         onclick="return confirm('Delete?')">Delete</a>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

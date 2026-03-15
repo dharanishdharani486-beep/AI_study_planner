@@ -1,42 +1,353 @@
 {% extends 'base.html' %}
-{% block content %}
+{% block page_styles %}
 <style>
-.dashboard-hero { background: linear-gradient(135deg, #eff5ff 0%, #f4f9ff 100%); border-radius: 12px; padding: 22px; }
-.metric-card { border-left: 4px solid #0b6ffe; }
-.quick-actions a { width: 100%; text-align: left; }
-.log-card { box-shadow: 0 8px 18px rgba(40, 84, 144, 0.14); }
+  .dashboard-wrap {
+    display: grid;
+    gap: 24px;
+  }
+
+  .dashboard-hero {
+    position: relative;
+    overflow: hidden;
+    padding: 34px;
+    border-radius: 30px;
+    color: #f4fbf8;
+    background:
+      radial-gradient(circle at top right, rgba(255, 209, 111, 0.22), transparent 24%),
+      linear-gradient(135deg, #10344a 0%, #145f53 52%, #0f8a74 100%);
+    box-shadow: 0 28px 56px rgba(14, 64, 59, 0.24);
+    animation: heroFloat 700ms ease-out;
+  }
+
+  .dashboard-hero::after {
+    content: '';
+    position: absolute;
+    width: 240px;
+    height: 240px;
+    right: -50px;
+    bottom: -90px;
+    border-radius: 36px;
+    transform: rotate(16deg);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .hero-kicker {
+    display: inline-flex;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 800;
+  }
+
+  .dashboard-hero h2 {
+    margin: 18px 0 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(2.4rem, 5vw, 4.2rem);
+    line-height: 0.95;
+    letter-spacing: -0.06em;
+  }
+
+  .hero-copy {
+    max-width: 560px;
+    color: rgba(244, 251, 248, 0.82);
+    font-size: 1.05rem;
+  }
+
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .metric-card {
+    padding: 18px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(10px);
+  }
+
+  .metric-label {
+    color: rgba(244, 251, 248, 0.7);
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    font-weight: 800;
+  }
+
+  .metric-value {
+    margin-top: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2rem;
+    letter-spacing: -0.05em;
+  }
+
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 24px;
+  }
+
+  .studio-card {
+    padding: 28px;
+  }
+
+  .card-kicker {
+    margin-bottom: 8px;
+    color: #7d532a;
+    font-weight: 800;
+    font-size: 0.82rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .studio-card h4 {
+    margin-bottom: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.75rem;
+    letter-spacing: -0.04em;
+  }
+
+  .studio-card p {
+    color: var(--muted);
+  }
+
+  .quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  /* School widgets */
+  .school-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .mode-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 800;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+  }
+
+  .school-widget { padding: 24px; }
+  .school-widget h5 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: -0.03em;
+    margin-bottom: 14px;
+  }
+
+  .hw-dash-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(19,34,56,0.06);
+  }
+  .hw-dash-item:last-child { border-bottom: none; }
+
+  .hw-priority-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .dot-high   { background: #b82222; }
+  .dot-medium { background: #e07b24; }
+  .dot-low    { background: #0c6b5d; }
+
+  .hw-dash-title { font-weight: 700; font-size: 0.9rem; }
+  .hw-dash-due   { font-size: 0.8rem; color: var(--muted); }
+  .hw-dash-overdue { color: #b82222 !important; font-weight: 700; }
+
+  .exam-next-box {
+    padding: 20px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #10344a, #0f8a74);
+    color: #f4fbf8;
+    margin-bottom: 14px;
+  }
+  .exam-next-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.75; }
+  .exam-next-name  { font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; letter-spacing: -0.03em; margin: 4px 0 2px; }
+  .exam-next-date  { font-size: 0.88rem; opacity: 0.82; }
+
+  .school-empty { color: var(--muted); font-size: 0.9rem; padding: 8px 0; }
+
+  .quick-action {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 150px;
+    padding: 18px;
+    border-radius: 22px;
+    text-decoration: none;
+    color: var(--ink);
+    background: rgba(19, 34, 56, 0.04);
+    border: 1px solid rgba(19, 34, 56, 0.08);
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  }
+
+  .quick-action:hover,
+  .quick-action:focus {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 35px rgba(20, 47, 74, 0.12);
+    border-color: rgba(13, 124, 102, 0.22);
+  }
+
+  .quick-action .action-tag {
+    display: inline-flex;
+    width: fit-content;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .action-tag.sand { background: #fff1dc; color: #9a5a24; }
+  .action-tag.mint { background: #def6ef; color: #0c6b5d; }
+  .action-tag.sky { background: #e3f0ff; color: #275ea7; }
+  .action-tag.sun { background: #fff8d8; color: #8a6a0f; }
+
+  .quick-action strong {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.14rem;
+    letter-spacing: -0.03em;
+  }
+
+  .timeline-card {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .timeline-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 18px;
+    padding: 24px 28px 18px;
+    border-bottom: 1px solid rgba(19, 34, 56, 0.08);
+  }
+
+  .timeline-table {
+    margin-bottom: 0;
+  }
+
+  .timeline-table thead th {
+    border-bottom: none;
+    color: var(--muted);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .timeline-table tbody tr {
+    vertical-align: middle;
+  }
+
+  .subject-pill {
+    display: inline-flex;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(13, 124, 102, 0.1);
+    color: #0b6657;
+    font-weight: 700;
+  }
+
+  .delete-btn {
+    border-radius: 999px;
+  }
+
+  @keyframes heroFloat {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 991px) {
+    .dashboard-grid,
+    .school-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .metric-grid,
+    .quick-actions-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .dashboard-hero,
+    .studio-card {
+      padding: 24px;
+    }
+  }
 </style>
-
-<div class="dashboard-hero mb-4">
-  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
-    <div>
-      <h2 class="mb-1">Welcome back, {{ user.username }}</h2>
-      <p class="text-muted">Your personalized study insights in one place.</p>
+{% endblock %}
+{% block content %}
+<div class="dashboard-wrap">
+  <section class="dashboard-hero">
+    <div class="row g-4 align-items-end position-relative" style="z-index:1;">
+      <div class="col-lg-7">
+        <span class="hero-kicker">
+          {% if is_school %}School study dashboard{% else %}Study control room{% endif %}
+        </span>
+        <h2>Welcome back, {{ user.username }}</h2>
+        {% if is_school %}
+        <p class="hero-copy">Track homework, prepare for exams, and build daily study habits — your school dashboard is ready for today.</p>
+        {% else %}
+        <p class="hero-copy">This dashboard is built to feel like a personal study studio: quick capture on the left, high-leverage tools on the right, and today&apos;s progress always visible without hunting through menus.</p>
+        {% endif %}
+        <span class="mode-chip">
+          {% if is_school %}School Mode{% else %}College Mode{% endif %}
+        </span>
+      </div>
+      <div class="col-lg-5">
+        <div class="metric-grid">
+          <div class="metric-card">
+            <div class="metric-label">Current streak</div>
+            <div class="metric-value">{{ streak }}</div>
+            <div>days in motion</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Today</div>
+            <div class="metric-value">{{ total_today }}</div>
+            <div>minutes tracked</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">All time</div>
+            <div class="metric-value">{{ total_all }}</div>
+            <div>minutes logged</div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="d-flex gap-2">
-      <div class="card p-3 metric-card">
-        <div class="text-muted small">Current streak</div>
-        <div class="h5 mb-0">{{ streak }} days</div>
-      </div>
-      <div class="card p-3 metric-card" style="border-color:#28a745;">
-        <div class="text-muted small">Today</div>
-        <div class="h5 mb-0">{{ total_today }} min</div>
-      </div>
-      <div class="card p-3 metric-card" style="border-color:#17a2b8;">
-        <div class="text-muted small">Total</div>
-        <div class="h5 mb-0">{{ total_all }} min</div>
-      </div>
-    </div>
-  </div>
-</div>
+  </section>
 
-<div class="row gy-4">
-  <div class="col-lg-5">
-    <div class="card log-card p-4">
-      <h4>Add Study Log</h4>
+  <section class="dashboard-grid">
+    <div class="shell-card studio-card">
+      <div class="card-kicker">Capture a session</div>
+      <h4>Add today&apos;s study block</h4>
+      <p class="mb-4">Record a subject, specific topic, and duration so the dashboard reflects real progress instead of vague intent.</p>
+
       <form action="{{ url_for('add_study') }}" method="post">
         <div class="mb-3">
-          <label class="form-label" for="subject">Subject</label>
+          <label class="field-caption" for="subject">Subject</label>
           <select id="subject" name="subject" class="form-select" required onchange="updateTopics()">
             <option value="" disabled selected>Select a subject...</option>
             {% for subj in subjects %}
@@ -45,59 +356,167 @@
           </select>
         </div>
         <div class="mb-3">
-          <label class="form-label" for="topic">Topic</label>
+          <label class="field-caption" for="topic">Topic</label>
           <select id="topic" name="topic" class="form-select" required>
             <option value="" disabled selected>Select a subject first...</option>
           </select>
         </div>
-        <div class="mb-3">
-          <label class="form-label" for="minutes">Minutes</label>
-          <input id="minutes" type="number" name="minutes" value="60" min="1" class="form-control" required>
+        <div class="mb-4">
+          <label class="field-caption" for="minutes">Minutes</label>
+          <input id="minutes" type="number" name="minutes" value="60" min="30" class="form-control" required>
         </div>
-        <button class="btn btn-success btn-lg">Add Study Entry</button>
+        <button class="btn btn-brand btn-lg">Add Study Entry</button>
       </form>
     </div>
-  </div>
 
-  <div class="col-lg-7">
-    <div class="card log-card p-4">
-      <h4>Quick Actions</h4>
-      <div class="row quick-actions g-2">
-        <div class="col-sm-6"><a class="btn btn-outline-primary" href="{{ url_for('subject_planner') }}">Subject Planner</a></div>
-        <div class="col-sm-6"><a class="btn btn-outline-secondary" href="{{ url_for('topic_generator') }}">AI Topic Generator</a></div>
-        <div class="col-sm-6"><a class="btn btn-outline-warning" href="{{ url_for('ai_chat') }}">AI Doubt Solver</a></div>
-        <div class="col-sm-6"><a class="btn btn-outline-info" href="{{ url_for('focus_mode') }}">Focus Mode</a></div>
-        <div class="col-sm-12"><a class="btn btn-outline-success" href="{{ url_for('send_reminder') }}">Send Email Reminder</a></div>
+    <div class="shell-card studio-card">
+      <div class="card-kicker">High leverage actions</div>
+      <h4>Jump into what matters next</h4>
+      <p class="mb-4">Use the planner for structure, AI tools for acceleration, and focus mode when you want fewer distractions.</p>
+
+      <div class="quick-actions-grid">
+        <a class="quick-action" href="{{ url_for('subject_planner') }}">
+          <span class="action-tag sand">Planner</span>
+          <strong>Subject Planner</strong>
+          <span>Choose the primary subject and supporting topics for today.</span>
+        </a>
+        <a class="quick-action" href="{{ url_for('topic_generator') }}">
+          <span class="action-tag mint">AI</span>
+          <strong>Topic Generator</strong>
+          <span>Pull topic suggestions instantly when you need a revision list.</span>
+        </a>
+        <a class="quick-action" href="{{ url_for('ai_chat') }}">
+          <span class="action-tag sky">Help</span>
+          <strong>AI Doubt Solver</strong>
+          <span>Ask direct study questions and keep the flow moving.</span>
+        </a>
+        <a class="quick-action" href="{{ url_for('focus_mode') }}">
+          <span class="action-tag sun">Focus</span>
+          <strong>Focus Mode</strong>
+          <span>Launch a timed session around one topic without clutter.</span>
+        </a>
+        {% if is_school %}
+        <a class="quick-action" href="{{ url_for('homework') }}">
+          <span class="action-tag sand">Tasks</span>
+          <strong>Homework Tracker</strong>
+          <span>Track assignments and never miss a deadline.</span>
+        </a>
+        <a class="quick-action" href="{{ url_for('exams') }}">
+          <span class="action-tag mint">Calendar</span>
+          <strong>Exam Planner</strong>
+          <span>Schedule tests and see countdowns right on the dashboard.</span>
+        </a>
+        {% endif %}
       </div>
     </div>
-  </div>
-</div>
+  </section>
 
-<div class="card mt-4 log-card">
-  <div class="card-header bg-white">
-    <h5 class="mb-0">Today's Study History</h5>
-  </div>
-  <div class="table-responsive">
-    <table class="table table-striped mb-0 align-middle">
-      <thead>
-        <tr><th>Date</th><th>Subject</th><th>Topic</th><th>Minutes</th><th>Action</th></tr>
-      </thead>
-      <tbody>
-        {% for row in today_logs %}
-        <tr>
-          <td>{{ row.created_at.split('T')[0] }}</td>
-          <td>{{ row.subject }}</td>
-          <td>{{ row.topic or '-' }}</td>
-          <td>{{ row.minutes }}</td>
-          <td><a class="btn btn-sm btn-danger" href="{{ url_for('delete_log', log_id=row.id) }}">Delete</a></td>
-        </tr>
+  <!-- School widgets: homework + next exam (school students only) -->
+  {% if is_school %}
+  <section class="school-grid">
+    <!-- Upcoming homework -->
+    <div class="shell-card school-widget">
+      <div class="card-kicker mb-1">School</div>
+      <h5>📋 Upcoming Homework</h5>
+      {% if overdue_hw %}
+        <div class="hw-dash-item" style="margin-bottom:4px;">
+          <span class="hw-priority-dot dot-high"></span>
+          <div>
+            <div class="hw-dash-title">⚠ {{ overdue_hw|length }} overdue assignment{{ 's' if overdue_hw|length != 1 }}</div>
+            <div class="hw-dash-due hw-dash-overdue">Past due date</div>
+          </div>
+        </div>
+      {% endif %}
+      {% if upcoming_hw %}
+        {% for hw in upcoming_hw %}
+        <div class="hw-dash-item">
+          <span class="hw-priority-dot dot-{{ hw.priority }}"></span>
+          <div style="flex:1;min-width:0;">
+            <div class="hw-dash-title">{{ hw.title }}</div>
+            <div class="hw-dash-due">{{ hw.subject }} · Due {{ hw.due_date }}</div>
+          </div>
+        </div>
         {% endfor %}
-        {% if not today_logs %}
-        <tr><td colspan="5" class="text-center text-muted">No study logs yet for today.</td></tr>
-        {% endif %}
-      </tbody>
-    </table>
-  </div>
+      {% elif not overdue_hw %}
+        <p class="school-empty">No pending homework — all clear! 🎉</p>
+      {% endif %}
+      <a href="{{ url_for('homework') }}" class="btn btn-sm btn-outline-secondary mt-3" style="border-radius:999px;">View all homework →</a>
+    </div>
+
+    <!-- Next exam -->
+    <div class="shell-card school-widget">
+      <div class="card-kicker mb-1">School</div>
+      <h5>📅 Next Exam</h5>
+      {% if next_exam %}
+        <div class="exam-next-box">
+          <div class="exam-next-label">{{ next_exam.exam_type | upper }}</div>
+          <div class="exam-next-name">{{ next_exam.name }}</div>
+          <div class="exam-next-date">{{ next_exam.subject }} · {{ next_exam.exam_date }}</div>
+          {% if next_exam.topics %}
+          <div class="exam-next-date" style="margin-top:6px;font-size:0.8rem;opacity:0.7;">{{ next_exam.topics }}</div>
+          {% endif %}
+        </div>
+      {% else %}
+        <p class="school-empty">No upcoming exams scheduled.</p>
+      {% endif %}
+      <a href="{{ url_for('exams') }}" class="btn btn-sm btn-outline-secondary mt-2" style="border-radius:999px;">Manage exams →</a>
+    </div>
+  </section>
+  {% endif %}{# end school-only widgets #}
+
+  {% if not is_school %}
+  <section class="school-grid">
+    <div class="shell-card school-widget">
+      <div class="card-kicker mb-1">College</div>
+      <h5>Module Focus</h5>
+      <p class="text-muted mb-2">Configured stream: <strong>{{ profile.grade if profile and profile.grade else 'General' }}</strong></p>
+      <p class="text-muted mb-2">Department: <strong>{{ profile.department if profile and profile.department else '-' }}</strong></p>
+      <p class="text-muted">Today&apos;s selected subjects in your tracker are aligned to your college stream.</p>
+      <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary mt-2" style="border-radius:999px;">Edit stream in profile →</a>
+    </div>
+    <div class="shell-card school-widget">
+      <div class="card-kicker mb-1">College</div>
+      <h5>Study Recommendation</h5>
+      {% if total_today < 60 %}
+      <p class="text-muted">You have tracked <strong>{{ total_today }} minutes</strong> today. Add one more session to hit your momentum target.</p>
+      {% else %}
+      <p class="text-muted">Great work. You already tracked <strong>{{ total_today }} minutes</strong> today. Keep consistency and revise one difficult topic now.</p>
+      {% endif %}
+      <a href="{{ url_for('topic_generator') }}" class="btn btn-sm btn-outline-secondary mt-2" style="border-radius:999px;">Generate revision topics →</a>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="shell-card timeline-card">
+    <div class="timeline-head">
+      <div>
+        <div class="card-kicker mb-1">Today&apos;s history</div>
+        <h4 class="section-title mb-0">Study timeline</h4>
+      </div>
+      <div class="text-muted">{{ today_logs|length }} entries recorded today</div>
+    </div>
+    <div class="table-responsive">
+      <table class="table timeline-table align-middle">
+        <thead>
+          <tr><th>Date</th><th>Subject</th><th>Topic</th><th>Minutes</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          {% for row in today_logs %}
+          <tr>
+            <td>{{ row.created_at.split('T')[0] }}</td>
+            <td><span class="subject-pill">{{ row.subject }}</span></td>
+            <td>{{ row.topic or '-' }}</td>
+            <td>{{ row.minutes }}</td>
+            <td><a class="btn btn-sm btn-outline-danger delete-btn" href="{{ url_for('delete_log', log_id=row.id) }}">Delete</a></td>
+          </tr>
+          {% endfor %}
+          {% if not today_logs %}
+          <tr><td colspan="5" class="text-center text-muted py-4">No study logs yet for today.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 </div>
 
 <script>
