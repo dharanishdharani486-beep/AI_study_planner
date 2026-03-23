@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="shell-card" style="padding:24px; max-width: 1000px; margin: 0 auto;">
+    <h3 class="section-title mb-4 text-brand">Create Structured Question Paper</h3>
+    <p class="text-muted mb-4">Design a 4-part exam (50 marks). Each section has its own requirements.</p>
+
+    <form id="createExamForm" method="POST" action="/teacher/create_exam">
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label class="field-caption">Exam Title</label>
+                <input type="text" name="title" class="form-control" placeholder="e.g. Mid-Term Science" required>
+            </div>
+            <div class="col-md-3">
+                <label class="field-caption">Subject</label>
+                <input type="text" name="subject" class="form-control" placeholder="e.g. Physics" required>
+            </div>
+            <div class="col-md-3">
+                <label class="field-caption">Duration (Minutes)</label>
+                <input type="number" name="duration" class="form-control" min="5" value="60" required>
+            </div>
+            <div class="col-md-6">
+                <label class="field-caption">Standard / Grade</label>
+                <input type="text" name="standard" class="form-control" placeholder="e.g. 10" required>
+            </div>
+            <div class="col-md-6">
+                <label class="field-caption">Section</label>
+                <input type="text" name="section" class="form-control" placeholder="e.g. A" required>
+            </div>
+        </div>
+
+        <!-- Dynamic Part Sections -->
+        <div class="card mb-4 border-0 shadow-sm bg-light p-3">
+            <h5 class="fw-bold text-brand">PART I: Multiple Choice (MCQ)</h5>
+            <p class="small text-muted">Required: 15 to 20 questions (1 mark each).</p>
+            <div id="part1_container"></div>
+            <button type="button" class="btn btn-outline-brand btn-sm mt-2 add-btn" data-part="1">
+                <i class="bi bi-plus-circle"></i> Add Part I Question
+            </button>
+        </div>
+
+        <div class="card mb-4 border-0 shadow-sm bg-light p-3">
+            <h5 class="fw-bold text-brand">PART II: Very Short Answers</h5>
+            <p class="small text-muted">1 or 2 marks per question.</p>
+            <div id="part2_container"></div>
+            <button type="button" class="btn btn-outline-brand btn-sm mt-2 add-btn" data-part="2">
+                <i class="bi bi-plus-circle"></i> Add Part II Question
+            </button>
+        </div>
+
+        <div class="card mb-4 border-0 shadow-sm bg-light p-3">
+            <h5 class="fw-bold text-brand">PART III: Short Answers</h5>
+            <p class="small text-muted">Usually 3 marks per question.</p>
+            <div id="part3_container"></div>
+            <button type="button" class="btn btn-outline-brand btn-sm mt-2 add-btn" data-part="3">
+                <i class="bi bi-plus-circle"></i> Add Part III Question
+            </button>
+        </div>
+
+        <div class="card mb-4 border-0 shadow-sm bg-light p-3">
+            <h5 class="fw-bold text-brand">PART IV: Long Answers (Either-Or)</h5>
+            <p class="small text-muted">Required: 5 marks each (Choice A or Choice B).</p>
+            <div id="part4_container"></div>
+            <button type="button" class="btn btn-outline-brand btn-sm mt-2 add-btn" data-part="4">
+                <i class="bi bi-plus-circle"></i> Add Part IV Question Pairing
+            </button>
+        </div>
+
+        <div class="p-3 mb-4 sticky-bottom bg-white border rounded shadow-lg d-flex justify-content-between align-items-center">
+            <div>
+                <strong>Total Marks: <span id="currentTotal">0</span> / 50</strong>
+                <span id="marksWarning" class="text-danger small ms-3" style="display:none;">Must be exactly 50 total.</span>
+            </div>
+            <div class="d-flex gap-3">
+                <button type="submit" class="btn btn-brand btn-lg" id="saveExamBtn" disabled>Save Exam</button>
+                <a href="/teacher/dashboard" class="btn btn-outline-secondary btn-lg">Cancel</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Templates -->
+<template id="template_part1">
+    <div class="question-row border rounded p-3 mb-3 bg-white position-relative shadow-sm">
+        <div class="row g-3">
+            <input type="hidden" name="question_part[]" value="PART1">
+            <input type="hidden" name="question_marks[]" value="1">
+            <div class="col-12">
+                <label class="field-caption">PART I: MCQ Text</label>
+                <textarea name="question_text[]" class="form-control" rows="2" required></textarea>
+            </div>
+            <div class="col-md-3"><input type="text" name="option_a[]" class="form-control" placeholder="A" required></div>
+            <div class="col-md-3"><input type="text" name="option_b[]" class="form-control" placeholder="B" required></div>
+            <div class="col-md-3"><input type="text" name="option_c[]" class="form-control" placeholder="C" required></div>
+            <div class="col-md-3"><input type="text" name="option_d[]" class="form-control" placeholder="D" required></div>
+            <div class="col-md-6">
+                <label class="small fw-bold">Correct Answer</label>
+                <select name="correct_answer[]" class="form-select">
+                    <option value="A">Choice A</option>
+                    <option value="B">Choice B</option>
+                    <option value="C">Choice C</option>
+                    <option value="D">Choice D</option>
+                </select>
+            </div>
+        </div>
+        <button type="button" class="btn-close position-absolute top-0 end-0 m-2 remove-btn" title="Remove"></button>
+    </div>
+</template>
+
+<template id="template_part2">
+    <div class="question-row border rounded p-3 mb-3 bg-white position-relative shadow-sm">
+        <div class="row g-3">
+            <input type="hidden" name="question_part[]" value="PART2">
+            <div class="col-md-9">
+                <label class="field-caption">PART II: Question Text</label>
+                <textarea name="question_text[]" class="form-control" rows="2" required></textarea>
+            </div>
+            <div class="col-md-3">
+                <label class="field-caption">Marks</label>
+                <input type="number" name="question_marks[]" class="form-control marks-input" value="1" min="1" max="2" required>
+            </div>
+        </div>
+        <button type="button" class="btn-close position-absolute top-0 end-0 m-2 remove-btn" title="Remove"></button>
+    </div>
+</template>
+
+<template id="template_part3">
+    <div class="question-row border rounded p-3 mb-3 bg-white position-relative shadow-sm">
+        <div class="row g-3">
+            <input type="hidden" name="question_part[]" value="PART3">
+            <input type="hidden" name="question_marks[]" value="3">
+            <div class="col-12">
+                <label class="field-caption">PART III: Short Answer (3 Marks)</label>
+                <textarea name="question_text[]" class="form-control" rows="2" required></textarea>
+            </div>
+        </div>
+        <button type="button" class="btn-close position-absolute top-0 end-0 m-2 remove-btn" title="Remove"></button>
+    </div>
+</template>
+
+<template id="template_part4">
+    <div class="question-row border rounded p-3 mb-3 bg-white position-relative shadow-sm">
+        <div class="row g-3">
+            <input type="hidden" name="question_part[]" value="PART4">
+            <input type="hidden" name="question_marks[]" value="5">
+            <div class="col-12"><label class="fw-bold">PART IV: Either-Or Long Answer (5 Marks)</label></div>
+            <div class="col-md-6">
+                <label class="text-muted small">Option A (Choice 1)</label>
+                <textarea name="part4_option_a[]" class="form-control" rows="2" required placeholder="Question (a)"></textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="text-muted small">Option B (Choice 2)</label>
+                <textarea name="part4_option_b[]" class="form-control" rows="2" required placeholder="Question (b)"></textarea>
+            </div>
+        </div>
+        <button type="button" class="btn-close position-absolute top-0 end-0 m-2 remove-btn" title="Remove"></button>
+    </div>
+</template>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const containers = {
+        '1': document.getElementById('part1_container'),
+        '2': document.getElementById('part2_container'),
+        '3': document.getElementById('part3_container'),
+        '4': document.getElementById('part4_container')
+    };
+
+    const templates = {
+        '1': document.getElementById('template_part1'),
+        '2': document.getElementById('template_part2'),
+        '3': document.getElementById('template_part3'),
+        '4': document.getElementById('template_part4')
+    };
+
+    const totalDisplay = document.getElementById('currentTotal');
+    const saveBtn = document.getElementById('saveExamBtn');
+    const warning = document.getElementById('marksWarning');
+
+    function calculateTotal() {
+        let total = 0;
+        let mcqCount = 0;
+        
+        // Sum marks from inputs
+        document.querySelectorAll('input[name="question_marks[]"]').forEach(input => {
+            total += parseInt(input.value) || 0;
+        });
+        
+        // Count MCQs
+        document.querySelectorAll('input[name="question_part[]"]').forEach(input => {
+            if (input.value === 'PART1') mcqCount++;
+        });
+
+        totalDisplay.textContent = total;
+        
+        const mcqValid = mcqCount >= 15 && mcqCount <= 20;
+        const totalValid = total === 50;
+        
+        if (totalValid && mcqValid) {
+            saveBtn.disabled = false;
+            warning.style.display = 'none';
+        } else {
+            saveBtn.disabled = true;
+            warning.style.display = 'block';
+            let warnMsg = "";
+            if (!totalValid) warnMsg = "Total marks must be exactly 50.";
+            if (!mcqValid) warnMsg = "MCQs must be between 15 and 20.";
+            warning.textContent = warnMsg;
+        }
+    }
+
+    function addQuestion(part) {
+        const clone = templates[part].content.cloneNode(true);
+        containers[part].appendChild(clone);
+        
+        const newRow = containers[part].lastElementChild;
+        newRow.querySelector('.remove-btn').addEventListener('click', function() {
+            newRow.remove();
+            calculateTotal();
+        });
+
+        const marksInput = newRow.querySelector('.marks-input');
+        if (marksInput) {
+            marksInput.addEventListener('input', calculateTotal);
+        }
+        
+        calculateTotal();
+    }
+
+    document.querySelectorAll('.add-btn').forEach(btn => {
+        btn.addEventListener('click', () => addQuestion(btn.dataset.part));
+    });
+
+    // Auto-add 15 MCQs for convenience
+    for(let i=0; i<15; i++) addQuestion('1');
+});
+</script>
+
+<style>
+    .text-brand { color: #1a73e8; }
+    .btn-brand { background-color: #1a73e8; color: white; }
+    .btn-brand:hover { background-color: #1a73e8; opacity: 0.9; color: white; }
+    .question-row:hover { border-color: #1a73e8 !important; }
+    .sticky-bottom { z-index: 1000; bottom: 20px; }
+</style>
+{% endblock %}

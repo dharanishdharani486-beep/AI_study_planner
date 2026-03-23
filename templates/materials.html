@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="shell-card" style="padding:24px;">
+  <h3 class="section-title mb-2">Study Materials</h3>
+  <p class="text-muted">Browse and download teacher uploaded resources by subject.</p>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-4">
+      <label class="field-caption">Subject</label>
+      <select id="subjectSelect" class="form-select">
+        <option value="" selected>All Subjects</option>
+        {% for s in subjects %}
+        <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="field-caption">Topic</label>
+      <input id="topicInput" class="form-control" placeholder="Optional topic filter">
+    </div>
+    <div class="col-md-4 d-flex align-items-end">
+      <button id="loadBtn" class="btn btn-brand w-100">Load Materials</button>
+    </div>
+  </div>
+
+  <div id="materialsList" class="d-grid" style="gap:12px;"></div>
+</div>
+
+<script>
+  (function () {
+    const subjectSelect = document.getElementById('subjectSelect');
+    const topicInput = document.getElementById('topicInput');
+    const loadBtn = document.getElementById('loadBtn');
+    const list = document.getElementById('materialsList');
+
+    async function loadMaterials() {
+      list.innerHTML = '<div class="text-muted">Loading...</div>';
+      const params = new URLSearchParams();
+      if (subjectSelect.value) params.append('subject', subjectSelect.value);
+      if (topicInput.value.trim()) params.append('topic', topicInput.value.trim());
+      const resp = await fetch('/get_materials?' + params.toString());
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) {
+        list.innerHTML = '<div class="text-danger">Unable to load materials.</div>';
+        return;
+      }
+      if (!data.materials.length) {
+        list.innerHTML = '<div class="text-muted">No materials found.</div>';
+        return;
+      }
+      list.innerHTML = '';
+      data.materials.forEach((m) => {
+        const card = document.createElement('div');
+        card.className = 'border rounded p-3';
+        const action = m.material_type === 'video'
+          ? '<a class="btn btn-sm btn-outline-primary" href="' + m.video_link + '" target="_blank">Open Video</a>'
+          : '<a class="btn btn-sm btn-outline-primary" href="' + m.download_url + '">Download</a>';
+        card.innerHTML =
+          '<div class="fw-bold">' + m.title + '</div>' +
+          '<div class="text-muted">' + m.subject + ' / ' + m.topic + ' · by ' + m.teacher_name + '</div>' +
+          '<div class="mt-2">' + action + '</div>';
+        list.appendChild(card);
+      });
+    }
+
+    loadBtn.addEventListener('click', loadMaterials);
+    loadMaterials();
+  })();
+</script>
+{% endblock %}

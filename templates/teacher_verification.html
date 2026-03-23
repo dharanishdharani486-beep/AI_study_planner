@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="shell-card" style="padding:24px;">
+  <h3 class="section-title mb-2">Teacher Verification</h3>
+  <p class="text-muted">Upload degree certificate (PDF/JPG/PNG). Verification runs automatically using OCR and keyword checks.</p>
+
+  <div class="mb-3">
+    <strong>Current status:</strong>
+    <span class="badge bg-secondary" style="text-transform:uppercase;">{{ verification_status }}</span>
+  </div>
+
+  <form method="post" enctype="multipart/form-data">
+    <div class="mb-3">
+      <label class="field-caption">Degree Certificate</label>
+      <input type="file" name="proof_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
+    </div>
+    <button class="btn btn-brand">Verify Certificate</button>
+  </form>
+</div>
+{% endblock %}

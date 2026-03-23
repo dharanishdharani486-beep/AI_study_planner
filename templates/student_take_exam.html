@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid py-4" style="max-width: 1000px; margin: 0 auto;">
+    <div class="row g-4">
+        <!-- Header -->
+        <div class="col-lg-12">
+            <div class="shell-card shadow-lg p-4 bg-white rounded border-0 d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1 text-brand">{{ exam.title }}</h2>
+                    <h5 class="text-muted fw-normal">{{ exam.subject }} · {{ exam.total_marks }} Marks · {{ student_name }}</h5>
+                </div>
+                <div class="text-center bg-light p-3 rounded shadow-sm border border-secondary" style="min-width: 120px;">
+                    <div class="text-uppercase small fw-bold text-muted">Time Remaining</div>
+                    <div id="countdownTimer" class="h3 mb-0 fw-bold text-danger">--:--</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-12">
+            <form id="examForm" method="POST" action="/student/submit_school_exam" 
+                  data-user-id="{{ user_id }}" 
+                  data-duration="{{ exam.duration }}">
+                <input type="hidden" name="exam_id" value="{{ exam.id }}">
+
+                {% set ns = namespace(current_part='') %}
+                {% for q in questions %}
+                    {% if q.part != ns.current_part %}
+                        {% if ns.current_part != '' %}</div>{% endif %}
+                        {% set ns.current_part = q.part %}
+                        <div class="part-header my-4 p-3 bg-brand text-white rounded shadow-sm">
+                            <h4 class="mb-0">
+                                {% if q.part == 'PART1' %}PART I: Multiple Choice Questions (MCQ)
+                                {% elif q.part == 'PART2' %}PART II: Very Short Answers
+                                {% elif q.part == 'PART3' %}PART III: Short Answers
+                                {% elif q.part == 'PART4' %}PART IV: Long Answers (Either-Or)
+                                {% endif %}
+                            </h4>
+                        </div>
+                        <div class="part-container">
+                    {% endif %}
+
+                    <div class="question-card shadow-sm border-0 rounded-4 p-4 mb-4 bg-white position-relative">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h5 class="fw-bold text-dark">Q{{ loop.index }}. {{ q.question_text if q.part != 'PART4' else 'Choose ONE of the following (a or b):' }}</h5>
+                            <span class="badge bg-secondary rounded-pill px-3">{{ q.marks }} Marks</span>
+                        </div>
+
+                        {% if q.part == 'PART1' %}
+                            <div class="options-grid row g-3 mt-2">
+                                {% for opt in ['a', 'b', 'c', 'd'] %}
+                                    <div class="col-md-6">
+                                        <label class="option-label d-block p-3 border rounded-3 cursor-pointer">
+                                            <input type="radio" name="q_{{ q.id }}" value="{{ opt|upper }}" required class="me-2">
+                                            <span class="option-text"><strong>{{ opt|upper }}.</strong> {{ q['option_' ~ opt] }}</span>
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% elif q.part == 'PART2' or q.part == 'PART3' %}
+                            <div class="answer-box mt-3">
+                                <label class="field-caption">Your Answer</label>
+                                <textarea name="q_{{ q.id }}" class="form-control" rows="3" placeholder="Write your answer here..."></textarea>
+                            </div>
+                        {% elif q.part == 'PART4' %}
+                            <div class="row g-3 mt-2">
+                                <div class="col-12">
+                                    <label class="option-label d-block p-3 border rounded-3 cursor-pointer mb-3">
+                                        <input type="radio" name="q_{{ q.id }}_choice" value="A" required class="me-2">
+                                        <span class="option-text"><strong>(a)</strong> {{ q.option_a }}</span>
+                                    </label>
+                                    <div class="ps-4 mb-2 fw-bold text-muted text-center">--- OR ---</div>
+                                    <label class="option-label d-block p-3 border rounded-3 cursor-pointer">
+                                        <input type="radio" name="q_{{ q.id }}_choice" value="B" class="me-2">
+                                        <span class="option-text"><strong>(b)</strong> {{ q.option_b }}</span>
+                                    </label>
+                                </div>
+                                <div class="col-12 mt-3">
+                                    <label class="field-caption">Your Answer for Selected Choice</label>
+                                    <textarea name="q_{{ q.id }}_text" class="form-control" rows="5" placeholder="Write your choice's answer here..."></textarea>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                {% if questions %}</div>{% endif %}
+
+                <div class="text-center py-4">
+                    <button type="submit" class="btn btn-brand btn-lg px-5 shadow-sm rounded-pill fw-bold">Submit Exam</button>
+                    <p class="text-muted mt-3 small"><i class="bi bi-info-circle me-1"></i> Ensure all mandatory questions are answered before submitting.</p>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-brand { background-color: #1a73e8; }
+    .text-brand { color: #1a73e8; }
+    .btn-brand { background-color: #1a73e8; color: white; }
+    .btn-brand:hover { background-color: #1a73e8; opacity: 0.9; color: white; }
+    .option-label { transition: all 0.2s ease; background: #f8f9fa; }
+    .option-label:hover { border-color: #1a73e8; background: #eef5ff; }
+    .option-label:has(input:checked) { border-color: #1a73e8; background: #eef5ff; box-shadow: 0 0 8px rgba(26,115,232,0.2); }
+</style>
+
+<script>
+window.onblur = function () {
+    const form = document.getElementById('examForm');
+    const studentId = form ? form.getAttribute('data-user-id') : null;
+    fetch("/log_violation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            student_id: studentId,
+            violation_type: "tab_switch",
+            details: "User switched tab during Structured Exam"
+        })
+    });
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('examForm');
+    const duration = parseInt(form.getAttribute('data-duration') || '60', 10);
+    let timeLeft = duration * 60;
+    const timerDisplay = document.getElementById('countdownTimer');
+
+    const timerInterval = setInterval(() => {
+        const mins = Math.floor(timeLeft / 60);
+        const secs = timeLeft % 60;
+        timerDisplay.textContent = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            form.submit();
+        }
+        timeLeft--;
+    }, 1000);
+
+    window.onbeforeunload = () => "Discard exam progress?";
+    form.addEventListener('submit', () => window.onbeforeunload = null);
+});
+</script>
+{% endblock %}
