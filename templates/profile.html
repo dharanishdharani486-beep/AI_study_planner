@@ -94,6 +94,41 @@
     <p class="text-muted">Keep this up to date — AI suggestions and reminders adjust based on your student type.</p>
   </div>
 
+  {% if is_teacher %}
+  <form method="post" id="teacherProfileForm">
+    <div class="shell-card profile-section mb-4">
+      <h5><span class="section-icon icon-info">👩‍🏫</span>Teacher Assignment</h5>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="field-caption">Assigned Class / Grade</label>
+          <select name="assigned_standard" class="form-select" required>
+            <option value="">Select class...</option>
+            {% for grade in all_grades %}
+            <option value="{{ grade }}" {% if teacher_standard == grade %}selected{% endif %}>{{ grade }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="field-caption">Assigned Section</label>
+          <select name="assigned_section" class="form-select" required>
+            <option value="">Select section...</option>
+            {% for sec in section_choices %}
+            <option value="{{ sec }}" {% if teacher_section == sec %}selected{% endif %}>{{ sec }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-12">
+          <label class="field-caption">Subject (Optional)</label>
+          <input name="teacher_subject" class="form-control" value="{{ teacher_subject }}" placeholder="e.g. Mathematics">
+          <small class="text-muted">This subject is used for teacher profile and dashboard context.</small>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-brand btn-lg px-5">Save Profile</button>
+  </form>
+  {% else %}
+
   <form method="post" id="profileForm">
 
     <!-- ── Student Type ── -->
@@ -185,6 +220,12 @@
                  value="{{ profile.parent_email if profile }}" placeholder="parent@example.com">
           <small class="text-muted">Parent also receives automatic reminders (optional).</small>
         </div>
+        <div class="col-md-6 school-field">
+          <label class="field-caption">Parent / Guardian phone</label>
+          <input type="text" name="parent_phone" class="form-control"
+                 value="{{ profile.parent_phone if profile }}" placeholder="+911234567890">
+          <small class="text-muted">Used for weekly test result SMS notifications.</small>
+        </div>
       </div>
     </div>
 
@@ -223,8 +264,10 @@
     <button class="btn btn-brand btn-lg px-5">Save Profile</button>
 
   </form>
+  {% endif %}
 </div>
 
+{% if not is_teacher %}
 <script>
   const schoolGrades       = {{ all_grades | tojson | safe }};
   const collegeStreams      = {{ college_streams | tojson | safe }};
@@ -298,6 +341,15 @@
   /* ------ switch between school / college mode ------ */
   function onTypeChange() {
     const isSchool = document.getElementById('type_school').checked;
+    const nextType = isSchool ? 'school' : 'college';
+
+    if (typeof window.setUserType === 'function') {
+      window.setUserType(nextType);
+    } else {
+      localStorage.setItem('userType', nextType);
+      console.log('User Type:', nextType);
+      window.dispatchEvent(new CustomEvent('app-user-type-changed', { detail: { userType: nextType } }));
+    }
 
     document.querySelectorAll('.school-field').forEach(el => {
       el.style.display = isSchool ? '' : 'none';
@@ -326,6 +378,11 @@
   }
 
   // Apply saved state on page load
+  if (typeof window.setUserType === 'function') {
+    const initialType = document.getElementById('type_school').checked ? 'school' : 'college';
+    window.setUserType(initialType);
+  }
   onTypeChange();
 </script>
+{% endif %}
 {% endblock %}

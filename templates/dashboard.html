@@ -372,7 +372,7 @@
     <div class="shell-card studio-card">
       <div class="card-kicker">High leverage actions</div>
       <h4>Jump into what matters next</h4>
-      <p class="mb-4">Use the planner for structure, AI tools for acceleration, and focus mode when you want fewer distractions.</p>
+      <p class="mb-4">Use the planner for structure, AI tools for acceleration, and Focus Mode for deep work blocks.</p>
 
       <div class="quick-actions-grid">
         <a class="quick-action" href="{{ url_for('subject_planner') }}">
@@ -393,7 +393,7 @@
         <a class="quick-action" href="{{ url_for('focus_mode') }}">
           <span class="action-tag sun">Focus</span>
           <strong>Focus Mode</strong>
-          <span>Launch a timed session around one topic without clutter.</span>
+          <span>Run a gamified countdown session with XP, streaks, and challenge tracking.</span>
         </a>
         {% if is_school %}
         <a class="quick-action" href="{{ url_for('homework') }}">
@@ -405,6 +405,11 @@
           <span class="action-tag mint">Calendar</span>
           <strong>Exam Planner</strong>
           <span>Schedule tests and see countdowns right on the dashboard.</span>
+        </a>
+        <a class="quick-action" href="{{ url_for('student_available_exams') }}">
+          <span class="action-tag sky">Exams</span>
+          <strong>Attend School Exams</strong>
+          <span>View and take exams assigned by your teacher.</span>
         </a>
         {% endif %}
       </div>
@@ -460,6 +465,59 @@
         <p class="school-empty">No upcoming exams scheduled.</p>
       {% endif %}
       <a href="{{ url_for('exams') }}" class="btn btn-sm btn-outline-secondary mt-2" style="border-radius:999px;">Manage exams →</a>
+    </div>
+
+    <!-- School teacher exams -->
+    <div class="shell-card school-widget">
+      <div class="card-kicker mb-1">Teacher Exams</div>
+      <h5>📝 Assigned Exams</h5>
+      {% if available_school_exams %}
+        {% for sexam in available_school_exams %}
+        <div class="hw-dash-item d-flex justify-content-between align-items-center">
+            <div style="flex:1;min-width:0;">
+                <div class="hw-dash-title">
+                  {{ sexam.title }}
+                  {% if sexam.is_updated %}<span class="badge bg-primary ms-1" style="font-size:0.65rem;">🔄 Updated</span>{% endif %}
+                </div>
+                <div class="hw-dash-due">{{ sexam.subject }} · By {{ sexam.teacher_name }}</div>
+                {% if sexam.my_score is not none %}
+                <div class="badge bg-success mt-1">Score: {{ sexam.my_score }} / 50</div>
+                {% endif %}
+            </div>
+            {% if sexam.my_score is none %}
+            <a href="{{ url_for('student_take_exam', exam_id=sexam.id) }}" class="btn btn-sm btn-brand">Attend</a>
+            {% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="school-empty">No class exams assigned yet. Stay tuned!</p>
+      {% endif %}
+      <a href="{{ url_for('student_available_exams') }}" class="btn btn-sm btn-outline-secondary mt-3" style="border-radius:999px;">View history →</a>
+    </div>
+
+    <!-- Study Materials -->
+    <div class="shell-card school-widget">
+      <div class="card-kicker mb-1">Class Materials</div>
+      <h5>📚 Study Materials</h5>
+      {% if assigned_materials %}
+        {% for mat in assigned_materials %}
+        <div class="hw-dash-item d-flex justify-content-between align-items-center">
+            <div style="flex:1;min-width:0;">
+                <div class="hw-dash-title">{{ mat.title }}</div>
+                <div class="hw-dash-due">{{ mat.subject }} · By {{ mat.teacher_name }}</div>
+                <div class="badge bg-light text-dark mt-1">{{ mat.material_type | upper }}</div>
+            </div>
+            {% if mat.material_type == 'video' %}
+            <a href="{{ mat.video_link }}" target="_blank" class="btn btn-sm btn-outline-brand">Watch</a>
+            {% else %}
+            <a href="{{ url_for('download_material', material_id=mat.id) }}" class="btn btn-sm btn-outline-brand">Download</a>
+            {% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="school-empty">No class materials uploaded yet.</p>
+      {% endif %}
+      <a href="{{ url_for('topic_generator') }}" class="btn btn-sm btn-outline-secondary mt-3" style="border-radius:999px;">AI Suggestions →</a>
     </div>
   </section>
   {% endif %}{# end school-only widgets #}
@@ -520,26 +578,135 @@
 </div>
 
 <script>
-  const subjectTopics = {{ subject_topics | tojson | safe }};
   const subjectSelect = document.getElementById('subject');
   const topicSelect = document.getElementById('topic');
 
-  function updateTopics() {
-    const selectedSubject = subjectSelect.value;
-    const topics = subjectTopics[selectedSubject] || [];
-    
-    topicSelect.innerHTML = '<option value="" disabled selected>Select a topic...</option>';
-    
-    topics.forEach(topic => {
+  const subjects = {
+    college: {
+      'DBMS': ['Normalization', 'SQL', 'Transactions', 'Indexing', 'ER Model', 'Joins', 'Constraints', 'Relational Algebra'],
+      'Data Structures': ['Arrays', 'Linked List', 'Stacks', 'Queues', 'Trees', 'Graphs', 'Hashing', 'Heap'],
+      'Operating Systems': ['Process Scheduling', 'Threads', 'Deadlocks', 'Memory Management', 'Paging', 'File Systems', 'CPU Scheduling', 'Synchronization'],
+      'Computer Networks': ['OSI Model', 'TCP/IP', 'Routing', 'Switching', 'Subnetting', 'HTTP/HTTPS', 'DNS', 'Network Security'],
+      'Software Engineering': ['SDLC', 'Agile', 'Requirements', 'Design Patterns', 'Testing', 'Version Control', 'Code Review', 'Maintenance'],
+      'Artificial Intelligence': ['Search Algorithms', 'Knowledge Representation', 'Expert Systems', 'NLP Basics', 'Robotics', 'AI Ethics', 'Reasoning', 'Planning'],
+      'Machine Learning': ['Supervised Learning', 'Unsupervised Learning', 'Regression', 'Classification', 'Model Evaluation', 'Overfitting', 'Feature Engineering', 'Neural Networks'],
+      'Deep Learning': ['Perceptron', 'Backpropagation', 'CNN', 'RNN', 'LSTM', 'Transformers', 'Transfer Learning', 'Model Regularization'],
+      'Compiler Design': ['Lexical Analysis', 'Syntax Analysis', 'Parsing', 'Semantic Analysis', 'Intermediate Code', 'Optimization', 'Code Generation', 'Symbol Table'],
+      'Cloud Computing': ['Cloud Models', 'IaaS/PaaS/SaaS', 'Virtualization', 'Containers', 'Scalability', 'Load Balancing', 'Cloud Security', 'Serverless'],
+      'Cyber Security': ['Cryptography', 'Network Security', 'Authentication', 'Vulnerabilities', 'Malware', 'Firewalls', 'Incident Response', 'Web Security'],
+      'Data Science': ['Data Collection', 'Data Cleaning', 'Exploratory Data Analysis', 'Feature Engineering', 'Model Building', 'Data Visualization', 'Model Deployment', 'A/B Testing'],
+      'Big Data Analytics': ['Hadoop', 'Spark', 'MapReduce', 'Data Lakes', 'Stream Processing', 'NoSQL Basics', 'ETL Pipelines', 'Distributed Storage'],
+      'Internet of Things (IoT)': ['Sensors and Actuators', 'Microcontrollers', 'IoT Protocols', 'Edge Computing', 'IoT Security', 'Smart Devices', 'Cloud Integration', 'Real-Time Monitoring'],
+      'Distributed Systems': ['CAP Theorem', 'Consensus', 'Replication', 'Sharding', 'Fault Tolerance', 'Leader Election', 'Distributed Transactions', 'Eventual Consistency'],
+      'Computer Architecture': ['Instruction Set Architecture', 'Pipelining', 'Cache Memory', 'RISC vs CISC', 'Parallelism', 'Memory Hierarchy', 'Branch Prediction', 'Multiprocessors'],
+      'Digital Electronics': ['Boolean Algebra', 'Logic Gates', 'Combinational Circuits', 'Sequential Circuits', 'Flip-Flops', 'Counters', 'Karnaugh Maps', 'Multiplexers'],
+      'Microprocessors': ['8086 Architecture', 'Addressing Modes', 'Instruction Set', 'Interrupts', 'Assembly Language Basics', 'Memory Interfacing', 'I/O Interfacing', 'Timing Diagrams'],
+      'Theory of Computation': ['Finite Automata', 'Regular Expressions', 'Context Free Grammar', 'Pushdown Automata', 'Turing Machines', 'Decidability', 'Computability', 'Complexity Classes'],
+      'Linear Algebra': ['Matrices', 'Determinants', 'Vector Spaces', 'Linear Transformations', 'Eigenvalues', 'Eigenvectors', 'Orthogonality', 'Applications in ML'],
+      'Discrete Mathematics': ['Set Theory', 'Relations and Functions', 'Mathematical Logic', 'Combinatorics', 'Graph Theory', 'Recurrence Relations', 'Boolean Algebra', 'Proof Techniques'],
+      'Probability & Statistics': ['Probability Axioms', 'Random Variables', 'Probability Distributions', 'Expectation and Variance', 'Sampling', 'Hypothesis Testing', 'Correlation', 'Regression Basics']
+    },
+    school: {
+      'Mathematics': ['Algebra', 'Trigonometry', 'Calculus', 'Probability', 'Statistics', 'Geometry', 'Coordinate Geometry', 'Sequences and Series'],
+      'Physics': ['Mechanics', 'Thermodynamics', 'Optics', 'Electricity', 'Magnetism', 'Modern Physics', 'Waves', 'Current Electricity'],
+      'Chemistry': ['Atomic Structure', 'Chemical Bonding', 'Stoichiometry', 'Thermochemistry', 'Organic Chemistry', 'Equilibrium', 'Electrochemistry', 'Periodic Table'],
+      'Biology': ['Cell Structure', 'Genetics', 'Evolution', 'Human Physiology', 'Plant Physiology', 'Ecology', 'Reproduction', 'Biotechnology'],
+      'Computer Science': ['Computer Basics', 'Programming Fundamentals', 'Data Types', 'Control Statements', 'Functions', 'OOP Basics', 'Databases', 'Networking Basics'],
+      'English': ['Grammar', 'Reading Comprehension', 'Writing Skills', 'Vocabulary', 'Tenses', 'Essay Writing', 'Poetry Analysis', 'Letter Writing'],
+      'Social Science': ['History', 'Geography', 'Civics', 'Economics Basics', 'Map Work', 'Constitution', 'Industrialization', 'Resources'],
+      'History': ['Ancient Civilizations', 'Medieval India', 'Modern India', 'World Wars', 'Freedom Movement', 'Revolutions', 'Constitutional Development', 'Historical Sources'],
+      'Geography': ['Physical Features', 'Climate', 'Natural Resources', 'Agriculture', 'Industries', 'Population', 'Maps and Topography', 'Disaster Management'],
+      'Civics': ['Democracy', 'Constitution', 'Fundamental Rights', 'Parliament', 'Judiciary', 'Local Government', 'Election System', 'Public Policy'],
+      'Economics': ['Demand and Supply', 'National Income', 'Inflation', 'Fiscal Policy', 'Banking', 'Market Structures', 'Consumer Behavior', 'Economic Development'],
+      'Accountancy': ['Journal Entries', 'Ledger', 'Trial Balance', 'Final Accounts', 'Depreciation', 'Cash Flow', 'Partnership Accounts', 'Ratio Analysis'],
+      'Business Studies': ['Nature of Business', 'Management Principles', 'Marketing', 'Finance', 'Human Resources', 'Business Environment', 'Planning', 'Organizing'],
+      'Environmental Science': ['Ecosystems', 'Biodiversity', 'Pollution', 'Climate Change', 'Natural Resources', 'Waste Management', 'Conservation', 'Sustainable Development'],
+      'General Knowledge': ['Current Affairs', 'Science and Technology', 'Indian Polity', 'Geography Facts', 'Historical Events', 'Sports', 'Awards and Honors', 'Important Days']
+    }
+  };
+
+  function getUserType() {
+    if (typeof window.getUserType === 'function') {
+      return window.getUserType();
+    }
+    const raw = String(localStorage.getItem('userType') || '').toLowerCase();
+    const userType = raw === 'school' || raw === 'college' ? raw : 'college';
+    localStorage.setItem('userType', userType);
+    console.log('User Type:', userType);
+    return userType;
+  }
+
+  function getSubjectsByUserType(userType) {
+    const catalog = subjects[userType] || subjects.college;
+    return Object.keys(catalog);
+  }
+
+  function updateTopicDropdown(subject, preferredTopic) {
+    const userType = getUserType();
+    const catalog = subjects[userType] || subjects.college;
+    const topics = catalog[subject] || ['General Revision', 'Concept Practice', 'Problem Solving', 'Test Preparation'];
+
+    topicSelect.innerHTML = '';
+
+    if (!subject) {
+      topicSelect.innerHTML = '<option value="" disabled selected>Select a subject first...</option>';
+      return;
+    }
+
+    topics.forEach((topic) => {
       const option = document.createElement('option');
       option.value = topic;
       option.textContent = topic;
       topicSelect.appendChild(option);
     });
+
+    if (preferredTopic && topics.includes(preferredTopic)) {
+      topicSelect.value = preferredTopic;
+    } else {
+      topicSelect.selectedIndex = 0;
+    }
   }
-  
-  // Initialize on load just in case
-  updateTopics();
+
+  function updateSubjectDropdown() {
+    const userType = getUserType();
+    const available = getSubjectsByUserType(userType);
+    const currentValue = subjectSelect.value;
+
+    subjectSelect.innerHTML = '<option value="" disabled>Select a subject...</option>';
+    available.forEach((subject) => {
+      const option = document.createElement('option');
+      option.value = subject;
+      option.textContent = subject;
+      subjectSelect.appendChild(option);
+    });
+
+    if (currentValue && available.includes(currentValue)) {
+      subjectSelect.value = currentValue;
+      updateTopicDropdown(currentValue);
+      return;
+    }
+
+    if (available.length) {
+      subjectSelect.value = available[0];
+      updateTopicDropdown(available[0]);
+      return;
+    }
+
+    subjectSelect.selectedIndex = 0;
+    updateTopicDropdown('');
+  }
+
+  function updateTopics() {
+    updateTopicDropdown(subjectSelect.value);
+  }
+
+  updateSubjectDropdown();
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'userType') {
+      updateSubjectDropdown();
+    }
+  });
+  window.addEventListener('app-user-type-changed', updateSubjectDropdown);
 </script>
 
 {% endblock %}

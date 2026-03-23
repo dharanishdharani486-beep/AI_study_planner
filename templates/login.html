@@ -190,6 +190,9 @@
         <div class="mb-4">
           <label class="field-caption" for="password">Password</label>
           <input id="password" type="password" name="password" class="form-control" placeholder="Enter your password" required>
+          <small class="text-muted d-block mt-2">
+            <a href="{{ url_for('forgot_password') }}" style="color: #0056b3; text-decoration: none;">Forgot your password?</a>
+          </small>
         </div>
         <div class="auth-links mb-4">
           <span class="text-muted">New here?</span>
@@ -200,4 +203,36 @@
     </div>
   </section>
 </div>
+
+<script>
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('logged_out') !== '1') {
+      return;
+    }
+
+    const keysToRemove = [
+      'userType',
+      'focus_selected_subject_v1',
+      'focus_selected_topic_v1',
+      'focus_notes_session_active_v1',
+      'focus_active_session_v1',
+      'focus_pending_completion_v1'
+    ];
+
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+    sessionStorage.removeItem('focus_selected_subject_v1');
+    sessionStorage.removeItem('focus_selected_topic_v1');
+    if (window.FocusTimer && typeof window.FocusTimer.stopSession === 'function') {
+      window.FocusTimer.stopSession();
+    }
+
+    try {
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    } catch (e) {
+      // no-op
+    }
+  })();
+</script>
 {% endblock %}

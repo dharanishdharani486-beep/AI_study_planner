@@ -1,27 +1,1993 @@
-﻿{% extends 'base.html' %}
-{% block content %}
-<h2>Focus Mode</h2>
-<form method="post" class="mb-3">
-  <div class="mb-2"><label>Topic</label><input class="form-control" name="topic" value="{{ topic }}" required></div>
-  <div class="mb-2"><label>Duration (minutes)</label><input type="number" class="form-control" name="duration" value="{{ duration }}" min="15" max="120" required></div>
-  <button class="btn btn-success">Start Timer</button>
-</form>
+{% extends 'base.html' %}
+{% block page_styles %}
+<style>
+  .focus-wrap {
+    display: grid;
+    gap: 22px;
+    animation: fadeIn 420ms ease;
+  }
 
-{% if topic %}
-  <div class="alert alert-info">Focus on <strong>{{ topic }}</strong> for {{ duration }} minutes.</div>
-  <div class="border p-3">
-    <h5>Timer</h5>
-    <div id="timer" style="font-size:2rem;">{{ duration }}:00</div>
-  </div>
-  <script>
-    let totalSec = {{ duration }} * 60;
-    function tick() {
-      if (totalSec <= 0) { alert('Time is up! Well done.'); return; }
-      totalSec -= 1;
-      let min = Math.floor(totalSec/60); let sec = totalSec%60;
-      document.getElementById('timer').innerText = `${min.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+  .focus-header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    padding: 22px;
+    background:
+      radial-gradient(circle at 80% 0%, rgba(111, 205, 255, 0.2), transparent 36%),
+      linear-gradient(135deg, #0e2342 0%, #153f73 48%, #1d6f8a 100%);
+    color: #eaf6ff;
+    box-shadow: 0 24px 48px rgba(16, 39, 72, 0.28);
+  }
+
+  .challenge-title {
+    margin: 0 0 8px;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: rgba(234, 246, 255, 0.82);
+    font-weight: 800;
+  }
+
+  .challenge-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .challenge-row strong {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(1.05rem, 2.2vw, 1.35rem);
+  }
+
+  .challenge-pill {
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.12);
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  .challenge-bar {
+    height: 12px;
+    width: 100%;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+  }
+
+  .challenge-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #46e6a7 0%, #8bf7a6 100%);
+    transition: width 300ms ease;
+  }
+
+  .focus-grid {
+    display: grid;
+    grid-template-columns: 0.95fr 1.05fr;
+    gap: 22px;
+  }
+
+  .focus-card {
+    padding: 24px;
+    border-radius: 26px;
+  }
+
+  .focus-card h3,
+  .focus-card h4 {
+    margin-bottom: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: -0.03em;
+  }
+
+  .helper {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 18px;
+  }
+
+  .start-btn {
+    width: 100%;
+    min-height: 52px;
+    font-size: 1rem;
+  }
+
+  .plan-box {
+    border: 1px solid rgba(19, 34, 56, 0.1);
+    border-radius: 16px;
+    padding: 14px;
+    background: rgba(13, 124, 102, 0.05);
+    display: none;
+  }
+
+  .plan-item {
+    padding: 8px 0;
+    border-bottom: 1px dashed rgba(19, 34, 56, 0.14);
+    font-size: 0.95rem;
+  }
+
+  .plan-item:last-child {
+    border-bottom: none;
+  }
+
+  .notes-card {
+    margin-top: 14px;
+    border: 1px solid rgba(19, 34, 56, 0.1);
+    border-radius: 16px;
+    padding: 14px;
+    background: rgba(47, 158, 249, 0.05);
+    display: none;
+  }
+
+  .notes-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .notes-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .notes-scroll {
+    max-height: 240px;
+    overflow: auto;
+    padding-right: 4px;
+  }
+
+  .notes-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.02rem;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+
+  .notes-subhead {
+    margin: 8px 0 4px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #1a4f7c;
+  }
+
+  .notes-list {
+    margin: 0;
+    padding-left: 18px;
+  }
+
+  .timer-zone {
+    display: grid;
+    place-items: center;
+    gap: 14px;
+  }
+
+  .timer-shell {
+    position: relative;
+    width: min(320px, 68vw);
+    aspect-ratio: 1 / 1;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.92) 32%, rgba(225, 242, 255, 0.84) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 24px 50px rgba(20, 47, 74, 0.22);
+  }
+
+  .timer-ring {
+    position: absolute;
+    inset: 0;
+    transform: rotate(-90deg);
+  }
+
+  .ring-track {
+    fill: none;
+    stroke: rgba(13, 124, 102, 0.15);
+    stroke-width: 12;
+  }
+
+  .ring-progress {
+    fill: none;
+    stroke: #0d7c66;
+    stroke-width: 12;
+    stroke-linecap: round;
+    stroke-dasharray: 879.64;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 250ms linear, stroke 220ms ease;
+  }
+
+  .ring-normal { stroke: #11a36f; }
+  .ring-warning { stroke: #f2a637; }
+  .ring-danger { stroke: #d74646; }
+
+  .time-big {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(2.2rem, 8vw, 3.5rem);
+    letter-spacing: -0.05em;
+    color: #12395f;
+  }
+
+  .timer-label {
+    color: #1a4f7c;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: 0.76rem;
+  }
+
+  .status-chip {
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .status-idle { background: #e9f1ff; color: #2a4f87; }
+  .status-live { background: #d9faee; color: #0d6a59; }
+  .status-paused { background: #fff3d8; color: #8d6012; }
+  .status-done { background: #e8ffe1; color: #1f7d2e; }
+
+  .session-actions {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .metric-box {
+    border: 1px solid rgba(19, 34, 56, 0.1);
+    border-radius: 18px;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  .metric-kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.76rem;
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  .metric-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.6rem;
+    letter-spacing: -0.03em;
+    margin-top: 6px;
+  }
+
+  .metric-sub {
+    margin-top: 4px;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  .level-bar {
+    margin-top: 8px;
+    height: 8px;
+    width: 100%;
+    border-radius: 999px;
+    background: rgba(19, 34, 56, 0.1);
+    overflow: hidden;
+  }
+
+  .level-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #2f9ef9 0%, #5ad0ff 100%);
+    transition: width 280ms ease;
+  }
+
+  .xp-float-zone {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: 50%;
+  }
+
+  .xp-float {
+    position: absolute;
+    left: 50%;
+    bottom: 24%;
+    transform: translateX(-50%);
+    color: #0e8d63;
+    font-weight: 800;
+    font-size: 1rem;
+    opacity: 0;
+    text-shadow: 0 1px 0 #fff;
+    animation: xpRise 760ms ease forwards;
+  }
+
+  .confetti-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1300;
+  }
+
+  .confetti-piece {
+    position: absolute;
+    width: 8px;
+    height: 14px;
+    border-radius: 3px;
+    opacity: 0.95;
+    animation: confettiFall 1300ms ease-out forwards;
+  }
+
+  .warn-overlay,
+  .end-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    place-items: center;
+    background: rgba(8, 20, 36, 0.64);
+    backdrop-filter: blur(4px);
+    z-index: 1200;
+    padding: 16px;
+  }
+
+  .overlay-card {
+    width: min(480px, 94vw);
+    border-radius: 20px;
+    background: #ffffff;
+    border: 1px solid rgba(19, 34, 56, 0.1);
+    box-shadow: 0 22px 40px rgba(8, 20, 36, 0.3);
+    padding: 22px;
+    animation: popIn 240ms ease;
+  }
+
+  .overlay-card h5 {
+    margin: 0 0 8px;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .overlay-card p {
+    margin: 0 0 16px;
+    color: var(--muted);
+  }
+
+  .summary-line {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dashed rgba(19, 34, 56, 0.12);
+    padding: 8px 0;
+    font-size: 0.95rem;
+  }
+
+  .summary-line:last-child {
+    border-bottom: none;
+  }
+
+  @media (max-width: 991px) {
+    .focus-grid {
+      grid-template-columns: 1fr;
     }
-    setInterval(tick, 1000);
-  </script>
-{% endif %}
+
+    .metrics-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes xpRise {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 10px) scale(0.9);
+    }
+    20% {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+      transform: translate(-50%, -56px) scale(1.08);
+    }
+  }
+
+  @keyframes confettiFall {
+    from {
+      transform: translateY(-30px) rotate(0deg);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(110vh) rotate(540deg);
+      opacity: 0;
+    }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div id="focusRoot" class="focus-wrap"
+  data-focus-user-type="{{ (user_type or 'college') | lower }}"
+  data-focus-subjects='{{ (focus_subjects or []) | tojson }}'
+  data-focus-topics='{{ (focus_topics or {}) | tojson }}'>
+  <section class="focus-header">
+    <p class="challenge-title">Daily Challenge</p>
+    <div class="challenge-row">
+      <strong>Complete 2 focus sessions</strong>
+      <span class="challenge-pill" id="challengeText">0/2</span>
+    </div>
+    <div class="challenge-bar">
+      <div class="challenge-fill" id="challengeFill"></div>
+    </div>
+  </section>
+
+  <section class="focus-grid">
+    <div class="shell-card focus-card">
+      <h3>AI Study Coach - Focus Mode</h3>
+      <p class="helper">Enter your topic and duration. The coach will split your time into concept learning, practice, and revision.</p>
+
+      <div class="mb-3">
+        <label class="field-caption" for="subjectSelect">Subject</label>
+        <select id="subjectSelect" class="form-select"></select>
+      </div>
+
+      <div class="mb-3">
+        <label class="field-caption" for="topicSelect">Topic</label>
+        <select id="topicSelect" class="form-select"></select>
+      </div>
+
+      <div class="mb-3" id="customTopicWrap" style="display:none;">
+        <label class="field-caption" for="customTopicInput">Custom Topic</label>
+        <input id="customTopicInput" class="form-control" type="text" placeholder="Type your custom topic">
+      </div>
+
+      <div class="mb-3">
+        <label class="field-caption" for="durationInput">Duration (minutes)</label>
+        <input id="durationInput" class="form-control" type="number" min="5" max="240" value="45">
+      </div>
+
+      <div class="d-grid gap-2">
+        <button id="startBtn" class="btn btn-brand start-btn">Start Focus</button>
+        <button id="generateNotesBtn" class="btn btn-outline-secondary" disabled title="Start a focus session to generate notes 🚀">📄 Generate Notes</button>
+        <small id="notesUnlockHint" class="text-muted">Click 'Generate Notes' to create study material 📘</small>
+        <small id="notesGateMessage" class="text-danger" style="display:none;">Start a focus session to generate notes 🚀</small>
+      </div>
+
+      <div id="planBox" class="plan-box mt-4">
+        <h6 class="mb-2">Smart AI Study Plan</h6>
+        <div id="planTopic" class="mb-2 text-muted"></div>
+        <div id="planList"></div>
+      </div>
+
+      <div id="notesCard" class="notes-card">
+        <div class="notes-head">
+          <h6 class="mb-0">AI Notes</h6>
+          <div class="notes-actions">
+            <button id="regenNotesBtn" class="btn btn-sm btn-outline-secondary">Regenerate Notes</button>
+            <button id="moreNotesBtn" class="btn btn-sm btn-outline-secondary">📚 Generate More Notes</button>
+            <button id="copyNotesBtn" class="btn btn-sm btn-outline-secondary">Copy Notes</button>
+          </div>
+        </div>
+        <div class="notes-scroll">
+          <div id="notesTitle" class="notes-title"></div>
+          <div id="notesHeadDefinition" class="notes-subhead">📘 Definition</div>
+          <ul id="notesDefinition" class="notes-list"></ul>
+          <div id="notesHeadConcepts" class="notes-subhead">🔑 Key Concepts</div>
+          <ul id="notesPoints" class="notes-list"></ul>
+          <div id="notesHeadExplanation" class="notes-subhead">🧠 Detailed Explanation</div>
+          <div id="notesExplanation" class="mb-1"></div>
+          <div id="notesHeadExample" class="notes-subhead">✏️ Example</div>
+          <ul id="notesExamples" class="notes-list"></ul>
+          <div id="notesHeadRevision" class="notes-subhead">⚡ Quick Revision</div>
+          <ul id="notesSummary" class="notes-list"></ul>
+          <div class="notes-subhead">💡 Extra Insights</div>
+          <ul id="notesTips" class="notes-list"></ul>
+
+          <div id="notesMoreWrap" style="display:none; margin-top: 10px;">
+            <div class="notes-subhead">🧩 Advanced Concepts</div>
+            <ul id="notesAdvanced" class="notes-list"></ul>
+            <div class="notes-subhead">🎤 Interview Questions</div>
+            <ul id="notesInterview" class="notes-list"></ul>
+            <div class="notes-subhead">🚫 Common Mistakes</div>
+            <ul id="notesMistakes" class="notes-list"></ul>
+            <div class="notes-subhead">📝 Additional Notes</div>
+            <p id="notesAdditional" class="mb-1"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="shell-card focus-card">
+      <div class="timer-zone">
+        <div id="statusChip" class="status-chip status-idle">Ready</div>
+        <div class="timer-shell">
+          <svg class="timer-ring" viewBox="0 0 300 300" aria-hidden="true">
+            <circle class="ring-track" cx="150" cy="150" r="140"></circle>
+            <circle id="ringProgress" class="ring-progress ring-normal" cx="150" cy="150" r="140"></circle>
+          </svg>
+          <div id="xpFloatZone" class="xp-float-zone" aria-hidden="true"></div>
+          <div class="timer-content text-center">
+            <div id="timeBig" class="time-big">00:00</div>
+            <div class="timer-label">Remaining</div>
+          </div>
+        </div>
+
+        <div class="session-actions">
+          <button id="pauseResumeBtn" class="btn btn-outline-secondary" disabled>Pause</button>
+          <button id="resetBtn" class="btn btn-outline-secondary" disabled>Stop Session</button>
+        </div>
+      </div>
+
+      <div class="metrics-row mt-4">
+        <div class="metric-box">
+          <div class="metric-kicker">Total XP</div>
+          <div id="xpValue" class="metric-value">0 XP</div>
+          <div id="sessionXpValue" class="metric-sub">Session XP: +0.0</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-kicker">Streak</div>
+          <div id="streakValue" class="metric-value">🔥 0 Day Streak</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-kicker">Level</div>
+          <div id="levelValue" class="metric-value">Beginner</div>
+          <div id="levelHint" class="metric-sub">0 XP to Intermediate</div>
+          <div class="level-bar"><div id="levelFill" class="level-fill"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="confettiLayer" class="confetti-layer" aria-hidden="true"></div>
+
+<div id="warnOverlay" class="warn-overlay">
+  <div class="overlay-card">
+    <h5>Stay focused! 🚫</h5>
+    <p>You switched tabs. Timer continues, but XP pauses until you return.</p>
+    <button id="warnOkBtn" class="btn btn-brand">I am back</button>
+  </div>
+</div>
+
+<div id="endOverlay" class="end-overlay">
+  <div class="overlay-card">
+    <h5>Session Completed 🎉</h5>
+    <div class="summary-line"><span>Topic</span><strong id="endTopic">-</strong></div>
+    <div class="summary-line"><span>Earned XP</span><strong id="endEarned">0 XP</strong></div>
+    <div class="summary-line"><span>Session Duration</span><strong id="endDuration">0 min</strong></div>
+    <div class="summary-line"><span>Bonus XP</span><strong id="endBonus">0 XP</strong></div>
+    <div class="summary-line"><span>Challenge</span><strong id="endChallenge">0/2</strong></div>
+    <div class="summary-line"><span>Updated Streak</span><strong id="endStreak">🔥 0 Day Streak</strong></div>
+    <div class="summary-line"><span>Level</span><strong id="endLevel">Beginner</strong></div>
+    <p id="endMessage" class="mt-2 mb-0">Great job! Keep the streak going 💪</p>
+    <button id="closeEndBtn" class="btn btn-brand mt-3 w-100">Done</button>
+  </div>
+</div>
+
+<script>
+  const keys = {
+    totalXP: 'focus_total_xp',
+    streak: 'focus_streak_count',
+    lastDate: 'focus_last_completed_date',
+    challengeDate: 'focus_challenge_date',
+    challengeCount: 'focus_challenge_count',
+    challengeDone: 'focus_challenge_done'
+  };
+
+  const DAILY_GOAL = 2;
+  const BONUS_XP = 20;
+  const RADIUS = 140;
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+  const subjectSelect = document.getElementById('subjectSelect');
+  const topicSelect = document.getElementById('topicSelect');
+  const customTopicWrap = document.getElementById('customTopicWrap');
+  const customTopicInput = document.getElementById('customTopicInput');
+  const durationInput = document.getElementById('durationInput');
+  const startBtn = document.getElementById('startBtn');
+  const generateNotesBtn = document.getElementById('generateNotesBtn');
+  const pauseResumeBtn = document.getElementById('pauseResumeBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  const planBox = document.getElementById('planBox');
+  const planTopic = document.getElementById('planTopic');
+  const planList = document.getElementById('planList');
+  const notesCard = document.getElementById('notesCard');
+  const notesTitle = document.getElementById('notesTitle');
+  const notesHeadDefinition = document.getElementById('notesHeadDefinition');
+  const notesHeadConcepts = document.getElementById('notesHeadConcepts');
+  const notesHeadExplanation = document.getElementById('notesHeadExplanation');
+  const notesHeadExample = document.getElementById('notesHeadExample');
+  const notesHeadRevision = document.getElementById('notesHeadRevision');
+  const notesDefinition = document.getElementById('notesDefinition');
+  const notesPoints = document.getElementById('notesPoints');
+  const notesExplanation = document.getElementById('notesExplanation');
+  const notesExamples = document.getElementById('notesExamples');
+  const notesSummary = document.getElementById('notesSummary');
+  const notesTips = document.getElementById('notesTips');
+  const notesMoreWrap = document.getElementById('notesMoreWrap');
+  const notesAdvanced = document.getElementById('notesAdvanced');
+  const notesInterview = document.getElementById('notesInterview');
+  const notesMistakes = document.getElementById('notesMistakes');
+  const notesAdditional = document.getElementById('notesAdditional');
+  const regenNotesBtn = document.getElementById('regenNotesBtn');
+  const moreNotesBtn = document.getElementById('moreNotesBtn');
+  const copyNotesBtn = document.getElementById('copyNotesBtn');
+  const notesGateMessage = document.getElementById('notesGateMessage');
+
+  const timeBig = document.getElementById('timeBig');
+  const statusChip = document.getElementById('statusChip');
+  const ringProgress = document.getElementById('ringProgress');
+  const xpFloatZone = document.getElementById('xpFloatZone');
+
+  const xpValue = document.getElementById('xpValue');
+  const sessionXpValue = document.getElementById('sessionXpValue');
+  const streakValue = document.getElementById('streakValue');
+  const levelValue = document.getElementById('levelValue');
+  const levelHint = document.getElementById('levelHint');
+  const levelFill = document.getElementById('levelFill');
+  const challengeText = document.getElementById('challengeText');
+  const challengeFill = document.getElementById('challengeFill');
+  const confettiLayer = document.getElementById('confettiLayer');
+
+  const warnOverlay = document.getElementById('warnOverlay');
+  const warnOkBtn = document.getElementById('warnOkBtn');
+  const endOverlay = document.getElementById('endOverlay');
+  const closeEndBtn = document.getElementById('closeEndBtn');
+
+  let timerId = null;
+  let isRunning = false;
+  let isSessionActive = false;
+  let sessionNotesContext = null;
+  let notesGeneratedForSession = false;
+  let displayedXP = 0;
+  let lastXPFloatMilestone = 0;
+
+  const selectionKeys = {
+    subject: 'focus_selected_subject_v1',
+    topic: 'focus_selected_topic_v1',
+    userType: 'userType'
+  };
+
+  const notesSessionKey = 'focus_notes_session_active_v1';
+
+  const focusRoot = document.getElementById('focusRoot');
+
+  function parseFocusJson(value, fallback) {
+    try {
+      return value ? JSON.parse(value) : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  const serverFocusBootstrap = {
+    userType: String((focusRoot && focusRoot.dataset && focusRoot.dataset.focusUserType) || 'college').toLowerCase(),
+    subjects: parseFocusJson(focusRoot && focusRoot.dataset ? focusRoot.dataset.focusSubjects : '', []),
+    topicsBySubject: parseFocusJson(focusRoot && focusRoot.dataset ? focusRoot.dataset.focusTopics : '', {})
+  };
+
+  const focusState = {
+    userType: String(serverFocusBootstrap.userType || 'college').toLowerCase(),
+    subjects: Array.isArray(serverFocusBootstrap.subjects) ? serverFocusBootstrap.subjects : [],
+    topicsBySubject: serverFocusBootstrap.topicsBySubject || {}
+  };
+
+  const SUBJECTS = {
+    college: {
+      'DBMS': ['Normalization', 'SQL', 'Transactions', 'Indexing', 'ER Model', 'Joins', 'Constraints', 'Relational Algebra'],
+      'Data Structures': ['Arrays', 'Linked List', 'Stacks', 'Queues', 'Trees', 'Graphs', 'Hashing', 'Heap'],
+      'Operating Systems': ['Process Scheduling', 'Threads', 'Deadlocks', 'Memory Management', 'Paging', 'File Systems', 'CPU Scheduling', 'Synchronization'],
+      'Computer Networks': ['OSI Model', 'TCP/IP', 'Routing', 'Switching', 'Subnetting', 'HTTP/HTTPS', 'DNS', 'Network Security'],
+      'Software Engineering': ['SDLC', 'Agile', 'Requirements', 'Design Patterns', 'Testing', 'Version Control', 'Code Review', 'Maintenance'],
+      'Artificial Intelligence': ['Search Algorithms', 'Knowledge Representation', 'Expert Systems', 'NLP Basics', 'Robotics', 'AI Ethics', 'Reasoning', 'Planning'],
+      'Machine Learning': ['Supervised Learning', 'Unsupervised Learning', 'Regression', 'Classification', 'Model Evaluation', 'Overfitting', 'Feature Engineering', 'Neural Networks'],
+      'Deep Learning': ['Perceptron', 'Backpropagation', 'CNN', 'RNN', 'LSTM', 'Transformers', 'Transfer Learning', 'Model Regularization'],
+      'Compiler Design': ['Lexical Analysis', 'Syntax Analysis', 'Parsing', 'Semantic Analysis', 'Intermediate Code', 'Optimization', 'Code Generation', 'Symbol Table'],
+      'Cloud Computing': ['Cloud Models', 'IaaS/PaaS/SaaS', 'Virtualization', 'Containers', 'Scalability', 'Load Balancing', 'Cloud Security', 'Serverless'],
+      'Cyber Security': ['Cryptography', 'Network Security', 'Authentication', 'Vulnerabilities', 'Malware', 'Firewalls', 'Incident Response', 'Web Security'],
+      'Data Science': ['Data Collection', 'Data Cleaning', 'Exploratory Data Analysis', 'Feature Engineering', 'Model Building', 'Data Visualization', 'Model Deployment', 'A/B Testing'],
+      'Big Data Analytics': ['Hadoop', 'Spark', 'MapReduce', 'Data Lakes', 'Stream Processing', 'NoSQL Basics', 'ETL Pipelines', 'Distributed Storage'],
+      'Internet of Things (IoT)': ['Sensors and Actuators', 'Microcontrollers', 'IoT Protocols', 'Edge Computing', 'IoT Security', 'Smart Devices', 'Cloud Integration', 'Real-Time Monitoring'],
+      'Distributed Systems': ['CAP Theorem', 'Consensus', 'Replication', 'Sharding', 'Fault Tolerance', 'Leader Election', 'Distributed Transactions', 'Eventual Consistency'],
+      'Computer Architecture': ['Instruction Set Architecture', 'Pipelining', 'Cache Memory', 'RISC vs CISC', 'Parallelism', 'Memory Hierarchy', 'Branch Prediction', 'Multiprocessors'],
+      'Digital Electronics': ['Boolean Algebra', 'Logic Gates', 'Combinational Circuits', 'Sequential Circuits', 'Flip-Flops', 'Counters', 'Karnaugh Maps', 'Multiplexers'],
+      'Microprocessors': ['8086 Architecture', 'Addressing Modes', 'Instruction Set', 'Interrupts', 'Assembly Language Basics', 'Memory Interfacing', 'I/O Interfacing', 'Timing Diagrams'],
+      'Theory of Computation': ['Finite Automata', 'Regular Expressions', 'Context Free Grammar', 'Pushdown Automata', 'Turing Machines', 'Decidability', 'Computability', 'Complexity Classes'],
+      'Linear Algebra': ['Matrices', 'Determinants', 'Vector Spaces', 'Linear Transformations', 'Eigenvalues', 'Eigenvectors', 'Orthogonality', 'Applications in ML'],
+      'Discrete Mathematics': ['Set Theory', 'Relations and Functions', 'Mathematical Logic', 'Combinatorics', 'Graph Theory', 'Recurrence Relations', 'Boolean Algebra', 'Proof Techniques'],
+      'Probability & Statistics': ['Probability Axioms', 'Random Variables', 'Probability Distributions', 'Expectation and Variance', 'Sampling', 'Hypothesis Testing', 'Correlation', 'Regression Basics']
+    },
+    school: {
+      'Mathematics': ['Algebra', 'Trigonometry', 'Calculus', 'Probability', 'Statistics', 'Geometry', 'Coordinate Geometry', 'Sequences and Series'],
+      'Physics': ['Mechanics', 'Thermodynamics', 'Optics', 'Electricity', 'Magnetism', 'Modern Physics', 'Waves', 'Current Electricity'],
+      'Chemistry': ['Atomic Structure', 'Chemical Bonding', 'Stoichiometry', 'Thermochemistry', 'Organic Chemistry', 'Equilibrium', 'Electrochemistry', 'Periodic Table'],
+      'Biology': ['Cell Structure', 'Genetics', 'Evolution', 'Human Physiology', 'Plant Physiology', 'Ecology', 'Reproduction', 'Biotechnology'],
+      'Computer Science': ['Computer Basics', 'Programming Fundamentals', 'Data Types', 'Control Statements', 'Functions', 'OOP Basics', 'Databases', 'Networking Basics'],
+      'English': ['Grammar', 'Reading Comprehension', 'Writing Skills', 'Vocabulary', 'Tenses', 'Essay Writing', 'Poetry Analysis', 'Letter Writing'],
+      'Social Science': ['History', 'Geography', 'Civics', 'Economics Basics', 'Map Work', 'Constitution', 'Industrialization', 'Resources'],
+      'History': ['Ancient Civilizations', 'Medieval India', 'Modern India', 'World Wars', 'Freedom Movement', 'Revolutions', 'Constitutional Development', 'Historical Sources'],
+      'Geography': ['Physical Features', 'Climate', 'Natural Resources', 'Agriculture', 'Industries', 'Population', 'Maps and Topography', 'Disaster Management'],
+      'Civics': ['Democracy', 'Constitution', 'Fundamental Rights', 'Parliament', 'Judiciary', 'Local Government', 'Election System', 'Public Policy'],
+      'Economics': ['Demand and Supply', 'National Income', 'Inflation', 'Fiscal Policy', 'Banking', 'Market Structures', 'Consumer Behavior', 'Economic Development'],
+      'Accountancy': ['Journal Entries', 'Ledger', 'Trial Balance', 'Final Accounts', 'Depreciation', 'Cash Flow', 'Partnership Accounts', 'Ratio Analysis'],
+      'Business Studies': ['Nature of Business', 'Management Principles', 'Marketing', 'Finance', 'Human Resources', 'Business Environment', 'Planning', 'Organizing'],
+      'Environmental Science': ['Ecosystems', 'Biodiversity', 'Pollution', 'Climate Change', 'Natural Resources', 'Waste Management', 'Conservation', 'Sustainable Development'],
+      'General Knowledge': ['Current Affairs', 'Science and Technology', 'Indian Polity', 'Geography Facts', 'Historical Events', 'Sports', 'Awards and Honors', 'Important Days']
+    }
+  };
+
+  const SUBJECT_ICONS = {
+    'DBMS': '🗄️',
+    'Data Structures': '💻',
+    'Operating Systems': '🖥️',
+    'Computer Networks': '🌐',
+    'Software Engineering': '🛠️',
+    'Artificial Intelligence': '🤖',
+    'Machine Learning': '🧠',
+    'Deep Learning': '🔬',
+    'Compiler Design': '🧾',
+    'Cloud Computing': '☁️',
+    'Cyber Security': '🔐',
+    'Data Science': '📊',
+    'Big Data Analytics': '📈',
+    'Internet of Things (IoT)': '📡',
+    'Distributed Systems': '🧩',
+    'Computer Architecture': '🧱',
+    'Digital Electronics': '⚡',
+    'Microprocessors': '🔧',
+    'Theory of Computation': '📐',
+    'Linear Algebra': '➗',
+    'Discrete Mathematics': '🧮',
+    'Probability & Statistics': '🎯',
+    'Mathematics': '📘',
+    'Physics': '🔭',
+    'Chemistry': '🧪',
+    'Biology': '🧬',
+    'Computer Science': '💻',
+    'English': '📝',
+    'Social Science': '🌍',
+    'History': '🏛️',
+    'Geography': '🗺️',
+    'Civics': '⚖️',
+    'Economics': '💹',
+    'Accountancy': '📒',
+    'Business Studies': '💼',
+    'Environmental Science': '🌱',
+    'General Knowledge': '🧠'
+  };
+
+  let notesVariantCounter = 0;
+
+  let profile = {
+    totalXP: 0,
+    streakCount: 0,
+    lastCompletedDate: '',
+    challengeDate: '',
+    challengeCount: 0,
+    challengeDone: false
+  };
+
+  function todayISO() {
+    const d = new Date();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + m + '-' + day;
+  }
+
+  function yesterdayISO() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + m + '-' + day;
+  }
+
+  function loadProfile() {
+    profile.totalXP = Number(localStorage.getItem(keys.totalXP) || 0);
+    profile.streakCount = Number(localStorage.getItem(keys.streak) || 0);
+    profile.lastCompletedDate = localStorage.getItem(keys.lastDate) || '';
+    profile.challengeDate = localStorage.getItem(keys.challengeDate) || todayISO();
+    profile.challengeCount = Number(localStorage.getItem(keys.challengeCount) || 0);
+    profile.challengeDone = localStorage.getItem(keys.challengeDone) === '1';
+
+    if (profile.challengeDate !== todayISO()) {
+      profile.challengeDate = todayISO();
+      profile.challengeCount = 0;
+      profile.challengeDone = false;
+      saveProfile();
+    }
+  }
+
+  function saveProfile() {
+    localStorage.setItem(keys.totalXP, String(profile.totalXP));
+    localStorage.setItem(keys.streak, String(profile.streakCount));
+    localStorage.setItem(keys.lastDate, profile.lastCompletedDate);
+    localStorage.setItem(keys.challengeDate, profile.challengeDate);
+    localStorage.setItem(keys.challengeCount, String(profile.challengeCount));
+    localStorage.setItem(keys.challengeDone, profile.challengeDone ? '1' : '0');
+  }
+
+  function updateRing(totalSeconds, remainingSeconds) {
+    const ratio = totalSeconds ? (remainingSeconds / totalSeconds) : 0;
+    const offset = CIRCUMFERENCE * (1 - ratio);
+    ringProgress.style.strokeDasharray = String(CIRCUMFERENCE);
+    ringProgress.style.strokeDashoffset = String(offset);
+
+    ringProgress.classList.remove('ring-normal', 'ring-warning', 'ring-danger');
+    if (ratio <= 0.03) ringProgress.classList.add('ring-danger');
+    else if (ratio <= 0.1) ringProgress.classList.add('ring-warning');
+    else ringProgress.classList.add('ring-normal');
+  }
+
+  function getLevelInfo(xp) {
+    if (xp < 100) {
+      return {
+        name: 'Beginner',
+        nextLabel: 'Intermediate',
+        toNext: (100 - xp).toFixed(1),
+        progress: (xp / 100) * 100,
+      };
+    }
+    if (xp < 300) {
+      return {
+        name: 'Intermediate',
+        nextLabel: 'Pro',
+        toNext: (300 - xp).toFixed(1),
+        progress: ((xp - 100) / 200) * 100,
+      };
+    }
+    return {
+      name: 'Pro',
+      nextLabel: 'Max',
+      toNext: '0.0',
+      progress: 100,
+    };
+  }
+
+  function animateXPDisplay(target) {
+    const clampedTarget = Math.max(0, target);
+    displayedXP += (clampedTarget - displayedXP) * 0.18;
+    if (Math.abs(clampedTarget - displayedXP) < 0.05) {
+      displayedXP = clampedTarget;
+    }
+    xpValue.textContent = displayedXP.toFixed(1) + ' XP';
+  }
+
+  function showXPFloating(amount) {
+    const bubble = document.createElement('div');
+    bubble.className = 'xp-float';
+    bubble.textContent = '+' + amount + ' XP';
+    xpFloatZone.appendChild(bubble);
+    setTimeout(() => bubble.remove(), 760);
+  }
+
+  function launchConfetti() {
+    const colors = ['#47e9a8', '#2f9ef9', '#ffd166', '#ff7b7b', '#8b5cf6'];
+    for (let i = 0; i < 42; i += 1) {
+      const piece = document.createElement('span');
+      piece.className = 'confetti-piece';
+      piece.style.left = Math.random() * 100 + '%';
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.animationDelay = (Math.random() * 0.18) + 's';
+      piece.style.transform = 'rotate(' + Math.floor(Math.random() * 360) + 'deg)';
+      confettiLayer.appendChild(piece);
+      setTimeout(() => piece.remove(), 1500);
+    }
+  }
+
+  function setStatus(type, label) {
+    statusChip.className = 'status-chip';
+    if (type === 'live') statusChip.classList.add('status-live');
+    else if (type === 'paused') statusChip.classList.add('status-paused');
+    else if (type === 'done') statusChip.classList.add('status-done');
+    else statusChip.classList.add('status-idle');
+    statusChip.textContent = label;
+  }
+
+  function getUserType() {
+    if (typeof window.getUserType === 'function' && window.getUserType !== getUserType) {
+      const resolved = window.getUserType();
+      return resolved === 'school' || resolved === 'college' ? resolved : (focusState.userType || 'college');
+    }
+
+    const safeType = focusState.userType === 'school' || focusState.userType === 'college' ? focusState.userType : 'college';
+    localStorage.setItem('userType', safeType);
+    return safeType;
+  }
+
+  function getSubjectCatalog(userType) {
+    const normalized = userType === 'school' || userType === 'college' ? userType : 'college';
+    if (focusState.userType !== normalized) {
+      focusState.userType = normalized;
+    }
+    return Array.isArray(focusState.subjects) ? focusState.subjects : [];
+  }
+
+  function getSubjectsByUserType(userType) {
+    return getSubjectCatalog(userType);
+  }
+
+  function getSubjectIcon(subject) {
+    return SUBJECT_ICONS[subject] || '📘';
+  }
+
+  function populateSubjects(userType, preferredSubject) {
+    const subjects = getSubjectsByUserType(userType);
+    subjectSelect.innerHTML = '';
+    subjects.forEach((subject) => {
+      const option = document.createElement('option');
+      option.value = subject;
+      option.textContent = getSubjectIcon(subject) + ' ' + subject;
+      subjectSelect.appendChild(option);
+    });
+
+    const desired = preferredSubject && subjects.includes(preferredSubject) ? preferredSubject : subjects[0];
+    subjectSelect.value = desired;
+  }
+
+  function updateSubjectDropdown() {
+    const currentUserType = getUserType();
+    const savedSubject = localStorage.getItem(selectionKeys.subject) || '';
+    populateSubjects(currentUserType, savedSubject || subjectSelect.value);
+  }
+
+  function getTopicsBySubject(subject) {
+    const activeMap = focusState.topicsBySubject || {};
+    if (Array.isArray(activeMap[subject]) && activeMap[subject].length) {
+      return activeMap[subject];
+    }
+    return ['Introduction', 'Core Concepts', 'Examples', 'Applications', 'Practice Questions', 'Revision'];
+  }
+
+  async function refreshFocusSubjectsFromServer(options) {
+    const settings = options || {};
+    const forceReload = !!settings.forceReload;
+
+    const previousUserType = getUserType();
+    const previousSubject = localStorage.getItem(selectionKeys.subject) || '';
+    const previousTopic = localStorage.getItem(selectionKeys.topic) || '';
+
+    try {
+      const response = await fetch('/api/focus-subjects?ts=' + Date.now(), {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, max-age=0',
+          'Pragma': 'no-cache'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Unable to refresh subjects');
+      }
+
+      const payload = await response.json();
+      const nextUserType = String(payload.user_type || '').toLowerCase();
+      const safeUserType = nextUserType === 'school' || nextUserType === 'college' ? nextUserType : 'college';
+
+      focusState.userType = safeUserType;
+      focusState.subjects = Array.isArray(payload.subjects) ? payload.subjects : [];
+      focusState.topicsBySubject = payload.topics_by_subject || {};
+
+      if (typeof window.setUserType === 'function') {
+        window.setUserType(safeUserType);
+      } else {
+        localStorage.setItem(selectionKeys.userType, safeUserType);
+      }
+
+      if (previousUserType !== safeUserType) {
+        localStorage.removeItem(selectionKeys.subject);
+        localStorage.removeItem(selectionKeys.topic);
+        sessionStorage.removeItem(selectionKeys.subject);
+        sessionStorage.removeItem(selectionKeys.topic);
+        if (forceReload) {
+          window.location.reload();
+          return;
+        }
+      }
+
+      updateSubjectDropdown();
+      const activeSubject = subjectSelect.value || previousSubject;
+      updateTopicDropdown(activeSubject, previousTopic);
+    } catch (error) {
+      // Keep bootstrap data if the request fails.
+      updateSubjectDropdown();
+      updateTopicDropdown(subjectSelect.value, previousTopic);
+    }
+  }
+
+  function updateTopicDropdown(subject, preferredTopic) {
+    populateTopics(subject, preferredTopic);
+  }
+
+  function getSelectedTopic() {
+    const chosen = topicSelect.value;
+    if (chosen === '__custom__') {
+      return customTopicInput.value.trim();
+    }
+    return String(chosen || '').trim();
+  }
+
+  function setSelectedTopic(topicValue) {
+    const subject = subjectSelect.value;
+    const list = getTopicsBySubject(subject);
+    const topic = String(topicValue || '').trim();
+    if (!topic) {
+      topicSelect.selectedIndex = 0;
+      customTopicWrap.style.display = 'none';
+      customTopicInput.value = '';
+      return;
+    }
+
+    if (list.includes(topic)) {
+      topicSelect.value = topic;
+      customTopicWrap.style.display = 'none';
+      customTopicInput.value = '';
+      return;
+    }
+
+    topicSelect.value = '__custom__';
+    customTopicWrap.style.display = 'block';
+    customTopicInput.value = topic;
+  }
+
+  function populateTopics(subject, preferredTopic) {
+    const topics = getTopicsBySubject(subject);
+    topicSelect.innerHTML = '';
+    topics.forEach((topic) => {
+      const option = document.createElement('option');
+      option.value = topic;
+      option.textContent = topic;
+      topicSelect.appendChild(option);
+    });
+
+    const customOption = document.createElement('option');
+    customOption.value = '__custom__';
+    customOption.textContent = 'Custom Topic...';
+    topicSelect.appendChild(customOption);
+
+    setSelectedTopic(preferredTopic || topics[0] || '');
+  }
+
+  function generateStudyPlan(topic, duration) {
+    const topicUpper = String(topic || '').toUpperCase();
+    const total = Math.max(5, Number(duration) || 25);
+
+    let conceptWeight = 0.45;
+    let exampleWeight = 0.35;
+    let revisionWeight = 0.2;
+
+    if (topicUpper.includes('NORMALIZATION') || topicUpper.includes('SQL') || topicUpper.includes('TRANSACTION')) {
+      conceptWeight = 0.5;
+      exampleWeight = 0.33;
+      revisionWeight = 0.17;
+    } else if (topicUpper.includes('TREE') || topicUpper.includes('GRAPH') || topicUpper.includes('ALGORITHM')) {
+      conceptWeight = 0.35;
+      exampleWeight = 0.5;
+      revisionWeight = 0.15;
+    }
+
+    const concept = Math.max(1, Math.round(total * conceptWeight));
+    const examples = Math.max(1, Math.round(total * exampleWeight));
+    const revision = Math.max(1, total - concept - examples);
+
+    return [
+      { label: 'Concept', value: concept, note: 'Build core understanding of ' + topic },
+      { label: 'Examples', value: examples, note: 'Practice with worked examples and quick questions' },
+      { label: 'Revision', value: revision, note: 'Summarize formulas, rules, and common mistakes' }
+    ];
+  }
+
+  function generateTimeSplit(duration) {
+    const total = Math.max(5, Number(duration) || 25);
+    if (total >= 55) {
+      return {
+        definition: Math.max(1, Math.round(total * 0.16)),
+        concepts: Math.max(1, Math.round(total * 0.25)),
+        explanation: Math.max(1, Math.round(total * 0.34)),
+        example: Math.max(1, Math.round(total * 0.17)),
+        revision: Math.max(1, total - (Math.round(total * 0.16) + Math.round(total * 0.25) + Math.round(total * 0.34) + Math.round(total * 0.17)))
+      };
+    }
+    if (total >= 30) {
+      return {
+        definition: Math.max(1, Math.round(total * 0.17)),
+        concepts: Math.max(1, Math.round(total * 0.33)),
+        explanation: Math.max(1, Math.round(total * 0.33)),
+        example: Math.max(1, Math.round(total * 0.17)),
+        revision: Math.max(1, total - (Math.round(total * 0.17) + Math.round(total * 0.33) + Math.round(total * 0.33) + Math.round(total * 0.17)))
+      };
+    }
+    return {
+      definition: Math.max(1, Math.round(total * 0.2)),
+      concepts: Math.max(1, Math.round(total * 0.28)),
+      explanation: Math.max(1, Math.round(total * 0.28)),
+      example: Math.max(1, Math.round(total * 0.16)),
+      revision: Math.max(1, total - (Math.round(total * 0.2) + Math.round(total * 0.28) + Math.round(total * 0.28) + Math.round(total * 0.16)))
+    };
+  }
+
+  function generateDetailedNotes(subject, topic, duration, mode) {
+    const mins = Number(duration) || 25;
+    const isShort = mins <= 20;
+    const isMedium = mins > 20 && mins <= 45;
+    const isLong = mins >= 50;
+    const phrasing = notesVariantCounter % 3;
+    const split = generateTimeSplit(mins);
+    const isMore = mode === 'more';
+
+    const keyConcepts = [];
+    const tips = [];
+    const examples = [];
+    let definition = '';
+    let explanation = '';
+    let summary = '';
+
+    if (subject === 'DBMS' || subject === 'Data Structures' || subject === 'Operating Systems' || subject === 'Computer Networks') {
+      definition = topic + ' is a core concept in ' + subject + ' used to improve correctness, efficiency, and structured problem solving.';
+      keyConcepts.push('Understand the purpose of ' + topic + ' and where it is applied.');
+      keyConcepts.push('Remember common rules, flow, and related terminology.');
+      keyConcepts.push('Connect the concept with practical implementation steps.');
+      explanation = 'In simple terms, ' + topic + ' helps you break a complex system into manageable logic so problems are solved in a reliable way.';
+      examples.push('Take one textbook scenario and apply ' + topic + ' step-by-step.');
+      examples.push('Solve one small practice question and verify your final output.');
+      summary = 'Revise definition, 3 key terms, and one solved example.';
+      tips.push('Use short diagrams or tables for faster recall.');
+      tips.push('Explain the concept in your own words in 2 lines.');
+    } else {
+      definition = topic + ' is an important topic in ' + subject + ' that builds conceptual clarity and exam confidence.';
+      keyConcepts.push('Know the basic definition and scope of ' + topic + '.');
+      keyConcepts.push('Identify formulas/rules/facts linked to this topic.');
+      keyConcepts.push('Practice one applied question to reinforce learning.');
+      explanation = 'Think of ' + topic + ' as a practical unit: first learn what it means, then how to apply it in exam-style questions.';
+      examples.push('Solve one representative classroom-level question.');
+      examples.push('Write one quick example from daily life or textbook context.');
+      summary = 'Quickly revise keywords, one method, and one example before ending the session.';
+      tips.push('Highlight keywords before reading long answers.');
+      tips.push('Use active recall: close notes and repeat key points.');
+    }
+
+    if (isMore) {
+      keyConcepts.push('Map ' + topic + ' with one related concept from ' + subject + ' and compare both.');
+      explanation += ' For deeper understanding, connect theory with one real-world workflow and identify possible mistakes.';
+      examples.push('Attempt one additional challenge question and justify each step in your answer.');
+      tips.push('Write a 5-line mini summary after each subtopic to improve retention.');
+    }
+
+    if (phrasing === 1) {
+      explanation += ' Keep explanations short and connect each step with why it matters.';
+      summary = 'Final recap: review essentials, verify one answer, then self-test for 2 minutes.';
+    } else if (phrasing === 2) {
+      explanation += ' Focus on understanding first, then accuracy in practice questions.';
+      summary = 'End with a quick self-check: definition, process, and one corrected mistake.';
+    }
+
+    if (isShort) {
+      return {
+        title: topic + (isMore ? ' - Expanded Quick Notes' : ' - Quick Notes'),
+        split,
+        definition,
+        keyConcepts: keyConcepts.slice(0, 2),
+        explanation: explanation,
+        examples: examples.slice(0, 1),
+        summary: 'Quick revision mode: focus on 2 points and 1 example. ' + summary,
+        tips: tips.slice(0, 1),
+      };
+    }
+
+    if (isMedium) {
+      return {
+        title: topic + (isMore ? ' - Expanded Medium Notes' : ' - Medium Notes'),
+        split,
+        definition,
+        keyConcepts,
+        explanation,
+        examples,
+        summary,
+        tips,
+      };
+    }
+
+    if (isLong) {
+      keyConcepts.push('Practice self-check questions after each mini section.');
+      examples.push('Add one extra example from previous-year style questions.');
+      tips.push('Teach this topic to someone else in 5 lines for stronger retention.');
+      return {
+        title: topic + (isMore ? ' - Advanced Detailed Notes' : ' - Detailed Notes'),
+        split,
+        definition,
+        keyConcepts,
+        explanation: explanation + ' Use diagrams/tables while revising for stronger memory.',
+        examples,
+        summary: 'Detailed revision mode: explain aloud, solve 2 examples, then summarize in 5 lines.',
+        tips,
+      };
+    }
+
+    return {
+      title: topic + ' - Smart Notes',
+      split,
+      definition,
+      keyConcepts,
+      explanation,
+      examples,
+      summary,
+      tips,
+    };
+  }
+
+  function generateNotes(subject, topic, duration) {
+    const mins = Number(duration) || 25;
+    const split = generateTimeSplit(mins);
+    const phrasing = notesVariantCounter % 4;
+    const rich = mins > 45;
+    const advanced = mins > 60;
+
+    const defLead = [
+      topic + ' in ' + subject + ' explains how core principles are applied in real study and exam scenarios.',
+      topic + ' is an important concept in ' + subject + ' that helps you move from theory to problem solving.',
+      'From an exam perspective, ' + topic + ' is frequently tested through conceptual and applied questions.',
+      'You should treat ' + topic + ' as both a definition-based and reasoning-based topic.'
+    ];
+
+    const keyConcepts = [
+      'Understand the scope and purpose of ' + topic + ' in ' + subject + '.',
+      'Memorize essential terminology and standard definitions linked to ' + topic + '.',
+      'Identify how this topic is represented in textbook problems and PYQs.',
+      'Connect this topic with adjacent concepts so you can answer integrated questions.',
+      'Know one standard workflow or step-by-step method related to ' + topic + '.',
+      'Practice recall by explaining the concept without looking at your notes.'
+    ];
+
+    if (rich) {
+      keyConcepts.push('Differentiate between the ideal/theoretical model and practical constraints.');
+      keyConcepts.push('Learn one optimization or shortcut approach commonly used in exam answers.');
+    }
+
+    const explanationParagraphs = [
+      topic + ' becomes easier when you break it into three parts: what it means, why it is needed, and how it is used. Start by defining the concept in one sentence, then connect it to a practical workflow. This approach helps you avoid rote learning and improves answer quality.',
+      'While studying, focus on cause and effect. Ask what problem ' + topic + ' solves and what happens if it is not applied correctly. This reasoning-based method helps in long answers, case-based questions, and interview-style follow-ups.',
+      'For revision, convert the topic into a compact framework: definition, key rules, one worked example, and one common mistake. Repeating this structure gives you clarity and speed during tests.'
+    ];
+
+    if (rich) {
+      explanationParagraphs.push('At higher duration sessions, include edge scenarios and exceptions. Examiners often check whether you can apply fundamentals in non-ideal cases, so spend time on tricky conditions and compare alternative approaches.');
+    }
+
+    if (advanced) {
+      explanationParagraphs.push('For advanced preparation, map this topic to architecture/performance/design trade-offs. This level of analysis is useful for competitive exams, viva questions, and technical interviews.');
+    }
+
+    const examples = [
+      'Example 1: Solve a basic textbook problem where you apply ' + topic + ' step-by-step and justify each decision.',
+      'Example 2: Take a practical scenario and explain how ' + topic + ' improves correctness, speed, or reliability.'
+    ];
+    if (rich) {
+      examples.push('Example 3: Compare two approaches and explain why one is more suitable under a given constraint.');
+    }
+
+    const quickRevision = [
+      'State the one-line definition of ' + topic + '.',
+      'Recall 3 core terms without referring to notes.',
+      'Remember one common formula/rule/process.',
+      'Write one mini-example in 3-4 lines.',
+      'List one frequent mistake and how to avoid it.'
+    ];
+    if (rich) {
+      quickRevision.push('Recall one edge case and your handling strategy.');
+      quickRevision.push('Connect this topic with one related chapter for integrated revision.');
+    }
+
+    const tips = [
+      'Use active recall every 15 minutes instead of passive rereading.',
+      'Write answers using structure: definition -> logic -> example -> conclusion.',
+      'Underline keywords that examiners typically expect in marking schemes.',
+      'When stuck, explain the topic aloud in simple language first.',
+      'Convert difficult points into flashcards for spaced revision.'
+    ];
+
+    const titleSuffix = rich ? 'Exam-Ready Notes' : 'Structured Notes';
+    const variationTag = phrasing === 0 ? 'Core' : phrasing === 1 ? 'Refined' : phrasing === 2 ? 'Practice' : 'Revision';
+
+    return {
+      title: topic + ' - ' + titleSuffix + ' (' + variationTag + ')',
+      split,
+      definition: defLead,
+      keyConcepts,
+      explanationParagraphs,
+      examples,
+      quickRevision,
+      tips,
+      advancedConcepts: advanced ? [
+        'Analyze constraints and scalability considerations for ' + topic + '.',
+        'Study edge behavior when assumptions are violated.',
+        'Compare implementation alternatives with trade-off reasoning.'
+      ] : [],
+      interviewQuestions: advanced ? [
+        'How would you explain ' + topic + ' to a beginner in one minute?',
+        'What are common trade-offs when applying ' + topic + '?',
+        'Where can ' + topic + ' fail in real systems and how do you fix it?'
+      ] : [],
+      commonMistakes: advanced ? [
+        'Using definitions without explaining practical impact.',
+        'Ignoring boundary cases in examples.',
+        'Memorizing steps without understanding why they are used.'
+      ] : [],
+      additionalNotes: advanced ? 'Advanced session note: spend the final 10 minutes writing one model answer with precise terminology and a justified example.' : ''
+    };
+  }
+
+  function generateMoreNotes(subject, topic, duration) {
+    const base = generateNotes(subject, topic, Math.max(Number(duration) || 25, 50));
+
+    base.title = topic + ' - Extended Master Notes';
+    base.advancedConcepts = [
+      'Break down ' + topic + ' into foundational, intermediate, and advanced layers.',
+      'Study edge cases that challenge standard assumptions.',
+      'Analyze performance/efficiency implications under different inputs.',
+      'Relate this concept to system design or architecture-level thinking.',
+      'Create a comparison matrix against at least two related concepts.'
+    ];
+    base.interviewQuestions = [
+      'Can you explain ' + topic + ' with one real-world use case?',
+      'What are the top mistakes students make in ' + topic + '?',
+      'How would you optimize a solution based on ' + topic + '?',
+      'What edge cases should always be tested?',
+      'How is this topic connected to advanced chapters?'
+    ];
+    base.commonMistakes = [
+      'Writing generic definitions without context.',
+      'Skipping assumptions and directly jumping to final answers.',
+      'Using examples that do not match the asked scenario.',
+      'Ignoring terminology precision in exam responses.',
+      'Not validating results through quick sanity checks.'
+    ];
+    base.additionalNotes = 'Extended notes mode: finish with a self-test block (5 questions), then review weak areas with targeted correction notes.';
+    base.examples.push('Example 4: Solve an edge-case problem and explain why the usual approach needed modification.');
+    base.quickRevision.push('Write a 60-second oral summary without seeing the notes.');
+    base.tips.push('Before exams, revise this topic with timed answer writing to improve clarity and speed.');
+
+    return base;
+  }
+
+  function renderNotes(subject, topic, duration, mode) {
+    notesVariantCounter += 1;
+    const notes = mode === 'more'
+      ? generateMoreNotes(subject, topic, duration)
+      : generateNotes(subject, topic, duration);
+
+    const split = notes.split || generateTimeSplit(duration);
+    notesTitle.textContent = notes.title;
+    notesHeadDefinition.textContent = '📘 Definition (' + split.definition + ' mins)';
+    notesHeadConcepts.textContent = '🔑 Key Concepts (' + split.concepts + ' mins)';
+    notesHeadExplanation.textContent = '🧠 Detailed Explanation (' + split.explanation + ' mins)';
+    notesHeadExample.textContent = '✏️ Example (' + split.example + ' mins)';
+    notesHeadRevision.textContent = '⚡ Quick Revision (' + split.revision + ' mins)';
+    notesDefinition.innerHTML = '';
+    (notes.definition || []).forEach((line) => {
+      const li = document.createElement('li');
+      li.textContent = line;
+      notesDefinition.appendChild(li);
+    });
+
+    notesPoints.innerHTML = '';
+    notes.examples = notes.examples || [];
+    notes.keyConcepts.forEach((item) => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      notesPoints.appendChild(li);
+    });
+
+    notesExamples.innerHTML = '';
+    notes.examples.forEach((item) => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      notesExamples.appendChild(li);
+    });
+
+    notesExplanation.innerHTML = '';
+    (notes.explanationParagraphs || []).forEach((paragraph) => {
+      const p = document.createElement('p');
+      p.className = 'mb-2';
+      p.textContent = paragraph;
+      notesExplanation.appendChild(p);
+    });
+
+    notesSummary.innerHTML = '';
+    (notes.quickRevision || []).forEach((item) => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      notesSummary.appendChild(li);
+    });
+
+    notesTips.innerHTML = '';
+    (notes.tips || []).forEach((item) => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      notesTips.appendChild(li);
+    });
+
+    const hasMoreSections = mode === 'more' || (notes.advancedConcepts && notes.advancedConcepts.length);
+    notesMoreWrap.style.display = hasMoreSections ? 'block' : 'none';
+
+    notesAdvanced.innerHTML = '';
+    (notes.advancedConcepts || []).forEach((item) => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      notesAdvanced.appendChild(li);
+    });
+
+    notesInterview.innerHTML = '';
+    (notes.interviewQuestions || []).forEach((item) => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      notesInterview.appendChild(li);
+    });
+
+    notesMistakes.innerHTML = '';
+    (notes.commonMistakes || []).forEach((item) => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      notesMistakes.appendChild(li);
+    });
+
+    notesAdditional.textContent = notes.additionalNotes || '';
+
+    notesCard.style.display = 'block';
+    notesGeneratedForSession = true;
+  }
+
+  function copyCurrentNotes() {
+    const text = [
+      notesTitle.textContent,
+      '',
+      notesHeadDefinition.textContent + ':',
+      ...Array.from(notesDefinition.querySelectorAll('li')).map((li) => '- ' + li.textContent),
+      '',
+      notesHeadConcepts.textContent + ':',
+      ...Array.from(notesPoints.querySelectorAll('li')).map((li) => '- ' + li.textContent),
+      '',
+      notesHeadExplanation.textContent + ':',
+      ...Array.from(notesExplanation.querySelectorAll('p')).map((p) => p.textContent),
+      '',
+      notesHeadExample.textContent + ':',
+      ...Array.from(notesExamples.querySelectorAll('li')).map((li) => '- ' + li.textContent),
+      '',
+      notesHeadRevision.textContent + ':',
+      ...Array.from(notesSummary.querySelectorAll('li')).map((li) => '- ' + li.textContent),
+      '',
+      'Tips:',
+      ...Array.from(notesTips.querySelectorAll('li')).map((li) => '- ' + li.textContent),
+      '',
+      'Advanced Concepts:',
+      ...Array.from(notesAdvanced.querySelectorAll('li')).map((li) => '- ' + li.textContent),
+      '',
+      'Interview Questions:',
+      ...Array.from(notesInterview.querySelectorAll('li')).map((li) => '- ' + li.textContent),
+      '',
+      'Common Mistakes:',
+      ...Array.from(notesMistakes.querySelectorAll('li')).map((li) => '- ' + li.textContent),
+      '',
+      'Additional Notes:',
+      notesAdditional.textContent
+    ].join('\n');
+
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Notes copied to clipboard.');
+    });
+  }
+
+  function renderPlan(topic, minutes) {
+    const plan = generateStudyPlan(topic, minutes);
+    planTopic.textContent = 'Topic: ' + topic;
+    planList.innerHTML = '';
+
+    plan.forEach((part) => {
+      const item = document.createElement('div');
+      item.className = 'plan-item';
+      item.innerHTML = '<strong>' + part.label + ':</strong> ' + part.value + ' min <span class="text-muted">(' + part.note + ')</span>';
+      planList.appendChild(item);
+    });
+
+    planBox.style.display = 'block';
+  }
+
+  function getSessionXPSeconds() {
+    const s = FocusTimer.getSession();
+    return s ? (s.xpSeconds || 0) : 0;
+  }
+
+  function updateMetrics() {
+    const liveXP = getSessionXPSeconds() / 60;
+    const totalXPLive = profile.totalXP + liveXP;
+    animateXPDisplay(totalXPLive);
+    sessionXpValue.textContent = 'Session XP: +' + liveXP.toFixed(1);
+    streakValue.textContent = '🔥 ' + profile.streakCount + ' Day Streak';
+
+    challengeText.textContent = profile.challengeCount + '/' + DAILY_GOAL;
+    const progress = Math.min(100, (profile.challengeCount / DAILY_GOAL) * 100);
+    challengeFill.style.width = progress + '%';
+
+    const level = getLevelInfo(totalXPLive);
+    levelValue.textContent = level.name;
+    levelHint.textContent = level.nextLabel === 'Max' ? 'Top level reached' : (level.toNext + ' XP to ' + level.nextLabel);
+    levelFill.style.width = Math.max(0, Math.min(100, level.progress)) + '%';
+  }
+
+  function setNotesActionButtonsEnabled(enabled) {
+    generateNotesBtn.disabled = !enabled;
+    regenNotesBtn.disabled = !enabled;
+    moreNotesBtn.disabled = !enabled;
+
+    if (enabled) {
+      generateNotesBtn.removeAttribute('title');
+    } else {
+      generateNotesBtn.title = 'Start a focus session to generate notes 🚀';
+    }
+  }
+
+  function clearSessionNotesContext() {
+    sessionNotesContext = null;
+    notesGeneratedForSession = false;
+  }
+
+  function setSessionNotesContext(subject, topic, durationMinutes) {
+    sessionNotesContext = {
+      subject: String(subject || '').trim(),
+      topic: String(topic || '').trim(),
+      durationMinutes: Math.max(5, Number(durationMinutes) || 25)
+    };
+    notesGeneratedForSession = false;
+  }
+
+  function getSessionNotesContext() {
+    if (sessionNotesContext) {
+      return sessionNotesContext;
+    }
+
+    const session = FocusTimer.getSession();
+    if (!session) {
+      return null;
+    }
+
+    const subject = session.subject || subjectSelect.value;
+    const topic = session.topic || getSelectedTopic();
+    const duration = session.durationMinutes || Math.round((session.durationSeconds || 0) / 60) || Number(durationInput.value || 25);
+    setSessionNotesContext(subject, topic, duration);
+    return sessionNotesContext;
+  }
+
+  function showNotesGateMessage() {
+    notesGateMessage.style.display = 'block';
+  }
+
+  function hideNotesGateMessage() {
+    notesGateMessage.style.display = 'none';
+  }
+
+  function setNotesAccess(active) {
+    isSessionActive = !!active;
+    localStorage.setItem(notesSessionKey, isSessionActive ? '1' : '0');
+    setNotesActionButtonsEnabled(isSessionActive);
+    if (isSessionActive) {
+      hideNotesGateMessage();
+    }
+  }
+
+  function enforceNotesGate() {
+    if (isSessionActive && FocusTimer.isSessionActive()) {
+      return true;
+    }
+    showNotesGateMessage();
+    alert('Start a focus session to generate notes 🚀');
+    return false;
+  }
+
+  function setIdleUI() {
+    isRunning = false;
+    clearInterval(timerId);
+    setStatus('idle', 'Ready');
+    startBtn.disabled = false;
+    pauseResumeBtn.disabled = true;
+    pauseResumeBtn.textContent = 'Pause';
+    resetBtn.disabled = true;
+    subjectSelect.disabled = false;
+    topicSelect.disabled = false;
+    customTopicInput.disabled = false;
+    durationInput.disabled = false;
+    timeBig.textContent = '00:00';
+    updateRing(1, 1);
+    warnOverlay.style.display = 'none';
+    setNotesAccess(false);
+    clearSessionNotesContext();
+    notesCard.style.display = 'none';
+    updateMetrics();
+  }
+
+  function resumeSessionUI(session) {
+    const remaining = FocusTimer.getRemainingTime();
+    if (!remaining.active || !session) {
+      setIdleUI();
+      return;
+    }
+
+    isRunning = !remaining.isPaused;
+    const subject = session.subject || localStorage.getItem(selectionKeys.subject) || subjectSelect.value;
+    subjectSelect.value = subject;
+    populateTopics(subject, session.topic || localStorage.getItem(selectionKeys.topic) || '');
+    durationInput.value = session.durationMinutes || Math.round((session.durationSeconds || 0) / 60);
+    subjectSelect.disabled = true;
+    topicSelect.disabled = true;
+    customTopicInput.disabled = true;
+    durationInput.disabled = true;
+    startBtn.disabled = true;
+    pauseResumeBtn.disabled = false;
+    pauseResumeBtn.textContent = remaining.isPaused ? 'Resume' : 'Pause';
+    resetBtn.disabled = false;
+    setSessionNotesContext(subject, session.topic || getSelectedTopic() || 'Focus Topic', Number(durationInput.value || 25));
+    setNotesAccess(true);
+
+    renderPlan(session.topic || getSelectedTopic() || 'Focus Topic', Number(durationInput.value || 25));
+
+    timeBig.textContent = FocusTimer.formatSeconds(remaining.remainingSeconds);
+    updateRing(session.durationSeconds || 1, remaining.remainingSeconds);
+    if (remaining.isPaused) {
+      setStatus('paused', '⏸ Paused');
+    } else {
+      setStatus(document.hidden ? 'paused' : 'live', document.hidden ? '⏸ Paused' : '▶ Running');
+    }
+    lastXPFloatMilestone = Math.floor((session.xpSeconds || 0) / 60);
+    updateMetrics();
+
+    clearInterval(timerId);
+    if (!remaining.isPaused) {
+      timerId = setInterval(tick, 1000);
+    }
+  }
+
+  function applyCompletionRewards(completion) {
+    if (!completion) return;
+
+    const completionSubject = subjectSelect.value || (completion && completion.subject) || '';
+    fetch('/api/activity/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action_type: 'focus_session_completed',
+        subject: completionSubject,
+        description: 'Completed focus session: ' + (completion.topic || 'Focus Topic') + ' (' + (completion.durationMinutes || 0) + ' min).'
+      })
+    }).catch(() => {});
+
+    const earnedXP = Math.floor((completion.xpSeconds || 0) / 60);
+    let bonusXP = 0;
+
+    if (earnedXP > 0) {
+      profile.totalXP += earnedXP;
+
+      const today = todayISO();
+      const yesterday = yesterdayISO();
+      if (profile.lastCompletedDate !== today) {
+        if (profile.lastCompletedDate === yesterday) profile.streakCount += 1;
+        else profile.streakCount = 1;
+        profile.lastCompletedDate = today;
+      }
+
+      if (profile.challengeDate !== today) {
+        profile.challengeDate = today;
+        profile.challengeCount = 0;
+        profile.challengeDone = false;
+      }
+
+      if (profile.challengeCount < DAILY_GOAL) {
+        profile.challengeCount += 1;
+      }
+
+      if (profile.challengeCount >= DAILY_GOAL && !profile.challengeDone) {
+        bonusXP = BONUS_XP;
+        profile.totalXP += BONUS_XP;
+        profile.challengeDone = true;
+        launchConfetti();
+      }
+
+      saveProfile();
+    }
+
+    setStatus('done', 'Session Complete');
+    updateMetrics();
+
+    document.getElementById('endTopic').textContent = completion.topic || getSelectedTopic();
+    document.getElementById('endEarned').textContent = earnedXP + ' XP';
+    document.getElementById('endDuration').textContent = (completion.durationMinutes || Math.round((completion.durationSeconds || 0) / 60)) + ' min';
+    document.getElementById('endBonus').textContent = bonusXP + ' XP';
+    document.getElementById('endChallenge').textContent = profile.challengeCount + '/' + DAILY_GOAL;
+    document.getElementById('endStreak').textContent = '🔥 ' + profile.streakCount + ' Day Streak';
+    document.getElementById('endLevel').textContent = getLevelInfo(profile.totalXP).name;
+    document.getElementById('endMessage').textContent = 'Great job! Keep the streak going 💪';
+
+    endOverlay.style.display = 'grid';
+    setIdleUI();
+  }
+
+  function startSession() {
+    const subject = subjectSelect.value;
+    const topic = getSelectedTopic();
+    const minutes = Number(durationInput.value || 0);
+
+    if (!topic) {
+      alert('Please select or type a topic.');
+      topicSelect.focus();
+      return;
+    }
+
+    if (!minutes || minutes < 5) {
+      alert('Duration must be at least 5 minutes.');
+      durationInput.focus();
+      return;
+    }
+
+    localStorage.setItem(selectionKeys.subject, subject);
+    localStorage.setItem(selectionKeys.topic, topic);
+
+    const session = FocusTimer.startFocusSession(topic, minutes, { subject: subject });
+    fetch('/api/activity/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action_type: 'focus_session_started',
+        subject: subject,
+        description: 'Started focus session: ' + topic + ' (' + minutes + ' min).'
+      })
+    }).catch(() => {});
+    lastXPFloatMilestone = 0;
+    setSessionNotesContext(subject, topic, minutes);
+    setNotesAccess(true);
+    resumeSessionUI(session);
+  }
+
+  function tick() {
+    const autoCompleted = FocusTimer.completeSessionIfNeeded();
+    if (autoCompleted) {
+      applyCompletionRewards(autoCompleted);
+      return;
+    }
+
+    const state = FocusTimer.getRemainingTime();
+    if (!state.active) {
+      const pending = FocusTimer.claimPendingCompletion();
+      if (pending) applyCompletionRewards(pending);
+      else setIdleUI();
+      return;
+    }
+
+    const session = state.session;
+    if (session && !document.hidden) {
+      const updatedXPSeconds = FocusTimer.addXpSeconds(1);
+      const minuteMilestone = Math.floor(updatedXPSeconds / 60);
+      if (minuteMilestone > lastXPFloatMilestone) {
+        showXPFloating(1);
+        lastXPFloatMilestone = minuteMilestone;
+      }
+    }
+
+    timeBig.textContent = FocusTimer.formatSeconds(state.remainingSeconds);
+    updateRing((session && session.durationSeconds) || 1, state.remainingSeconds);
+    updateMetrics();
+  }
+
+  function pauseSession() {
+    const paused = FocusTimer.pauseSession();
+    if (!paused) return;
+    clearInterval(timerId);
+    isRunning = false;
+    pauseResumeBtn.textContent = 'Resume';
+    setStatus('paused', '⏸ Paused');
+    const state = FocusTimer.getRemainingTime();
+    timeBig.textContent = FocusTimer.formatSeconds(state.remainingSeconds);
+    updateRing((state.session && state.session.durationSeconds) || 1, state.remainingSeconds);
+  }
+
+  function resumePausedSession() {
+    const resumed = FocusTimer.resumeSession();
+    if (!resumed) return;
+    resumeSessionUI(resumed);
+  }
+
+  function togglePauseResume() {
+    const state = FocusTimer.getRemainingTime();
+    if (!state.active) return;
+    if (state.isPaused) {
+      resumePausedSession();
+    } else {
+      pauseSession();
+    }
+  }
+
+  function resetSession() {
+    if (FocusTimer.isSessionActive()) {
+      const activeState = FocusTimer.getRemainingTime();
+      const activeSession = activeState && activeState.session ? activeState.session : null;
+      fetch('/api/activity/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action_type: 'focus_session_stopped',
+          subject: (activeSession && activeSession.subject) || subjectSelect.value || '',
+          description: 'Stopped focus session: ' + ((activeSession && activeSession.topic) || getSelectedTopic() || 'Focus Topic') + '.'
+        })
+      }).catch(() => {});
+      FocusTimer.stopSession();
+      setStatus('idle', 'Stopped');
+    }
+    setIdleUI();
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (!isRunning) return;
+    if (document.hidden) {
+      setStatus('paused', '⏸ Paused');
+      warnOverlay.style.display = 'grid';
+    } else {
+      setStatus('live', '▶ Running');
+      warnOverlay.style.display = 'none';
+    }
+  });
+
+  window.addEventListener('blur', () => {
+    if (!isRunning) return;
+    setStatus('paused', '⏸ Paused');
+    warnOverlay.style.display = 'grid';
+  });
+
+  window.addEventListener('focus', () => {
+    if (!isRunning) return;
+    if (!document.hidden) {
+      setStatus('live', '▶ Running');
+      warnOverlay.style.display = 'none';
+    }
+  });
+
+  window.addEventListener('beforeunload', (event) => {
+    if (!FocusTimer.isSessionActive()) return;
+    event.preventDefault();
+    event.returnValue = 'Focus session is still running 🚀';
+  });
+
+  warnOkBtn.addEventListener('click', () => {
+    warnOverlay.style.display = 'none';
+    if (isRunning && !document.hidden) {
+      setStatus('live', '▶ Running');
+    }
+  });
+
+  closeEndBtn.addEventListener('click', () => {
+    endOverlay.style.display = 'none';
+  });
+
+  subjectSelect.addEventListener('change', () => {
+    localStorage.setItem(selectionKeys.subject, subjectSelect.value);
+    updateTopicDropdown(subjectSelect.value);
+  });
+
+  topicSelect.addEventListener('change', () => {
+    const isCustom = topicSelect.value === '__custom__';
+    customTopicWrap.style.display = isCustom ? 'block' : 'none';
+    if (!isCustom) {
+      localStorage.setItem(selectionKeys.topic, topicSelect.value);
+      customTopicInput.value = '';
+    } else {
+      customTopicInput.focus();
+    }
+  });
+
+  customTopicInput.addEventListener('input', () => {
+    localStorage.setItem(selectionKeys.topic, customTopicInput.value.trim());
+  });
+
+  function handleGenerateNotesClick() {
+    if (!enforceNotesGate()) return;
+    const context = getSessionNotesContext();
+    if (!context || !context.topic) {
+      alert('Start a focus session to generate notes 🚀');
+      return;
+    }
+    if (notesGeneratedForSession) {
+      alert('Notes already generated. Use Regenerate Notes or Generate More Notes to update them.');
+      return;
+    }
+    renderNotes(context.subject, context.topic, context.durationMinutes);
+  }
+
+  function handleRegenerateNotesClick() {
+    if (!enforceNotesGate()) return;
+    const context = getSessionNotesContext();
+    if (!context || !context.topic) return;
+    renderNotes(context.subject, context.topic, context.durationMinutes);
+  }
+
+  function handleGenerateMoreNotesClick() {
+    if (!enforceNotesGate()) return;
+    const context = getSessionNotesContext();
+    if (!context || !context.topic) return;
+    renderNotes(context.subject, context.topic, context.durationMinutes, 'more');
+  }
+
+  generateNotesBtn.addEventListener('click', handleGenerateNotesClick);
+  regenNotesBtn.addEventListener('click', handleRegenerateNotesClick);
+  moreNotesBtn.addEventListener('click', handleGenerateMoreNotesClick);
+
+  copyNotesBtn.addEventListener('click', copyCurrentNotes);
+
+  startBtn.addEventListener('click', startSession);
+  pauseResumeBtn.addEventListener('click', togglePauseResume);
+  resetBtn.addEventListener('click', resetSession);
+
+  function loadActiveSession() {
+    if (!window.FocusTimer) {
+      setIdleUI();
+      return;
+    }
+
+    const pending = FocusTimer.claimPendingCompletion();
+    if (pending) {
+      applyCompletionRewards(pending);
+      return;
+    }
+
+    const active = FocusTimer.getRemainingTime();
+    if (active.active && active.session) {
+      setNotesAccess(true);
+      resumeSessionUI(active.session);
+      return;
+    }
+
+    if (localStorage.getItem(notesSessionKey) === '1') {
+      setNotesAccess(false);
+    }
+
+    setIdleUI();
+  }
+
+  loadProfile();
+  updateMetrics();
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    await refreshFocusSubjectsFromServer({ forceReload: true });
+    updateSubjectDropdown();
+    const savedTopic = localStorage.getItem(selectionKeys.topic) || '';
+    updateTopicDropdown(subjectSelect.value, savedTopic);
+    const timerReady = window.FocusTimer && typeof FocusTimer.isSessionActive === 'function';
+    setNotesAccess(timerReady && localStorage.getItem(notesSessionKey) === '1' && FocusTimer.isSessionActive());
+    loadActiveSession();
+  });
+
+  window.addEventListener('storage', (event) => {
+    if (event.key === selectionKeys.userType) {
+      refreshFocusSubjectsFromServer();
+    }
+  });
+  window.addEventListener('app-user-type-changed', () => {
+    refreshFocusSubjectsFromServer();
+  });
+</script>
 {% endblock %}
