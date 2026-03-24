@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="shell-card" style="padding:24px;">
+  <h3 class="section-title mb-2">Admin: Teacher Approvals</h3>
+  <p class="text-muted">Approve or reject teacher verification requests.</p>
+
+  <div class="mb-4" style="padding:14px; border:1px solid rgba(19,34,56,0.12); border-radius:12px; background:rgba(255,255,255,0.55);">
+    <h5 class="mb-2">Assign Teacher to Class-Section</h5>
+    <form method="post" class="row g-2 align-items-end">
+      <input type="hidden" name="action" value="assign_class">
+      <div class="col-md-5">
+        <label class="form-label">Teacher</label>
+        <select name="teacher_id" class="form-select" required>
+          <option value="">Select teacher</option>
+          {% for t in teachers %}
+          <option value="{{ t.id }}">{{ t.username }}{% if t.assigned_standard and t.assigned_section %} ({{ t.assigned_standard }}-{{ t.assigned_section }}){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Standard</label>
+        <input type="text" name="assigned_standard" class="form-control" placeholder="e.g. 11" required>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Section</label>
+        <input type="text" name="assigned_section" class="form-control" placeholder="e.g. A" required>
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-brand w-100">Assign</button>
+      </div>
+    </form>
+  </div>
+
+  {% if requests %}
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>Teacher</th>
+          <th>Email</th>
+          <th>Status</th>
+          <th>Assigned Class</th>
+          <th>Submitted</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in requests %}
+        <tr>
+          <td>{{ r.username }}</td>
+          <td>{{ r.email }}</td>
+          <td><span class="badge bg-info text-dark" style="text-transform:uppercase;">{{ r.status }}</span></td>
+          <td>
+            {% if r.assigned_standard and r.assigned_section %}
+              {{ r.assigned_standard }} - {{ r.assigned_section }}
+            {% else %}
+              <span class="text-muted">Not assigned</span>
+            {% endif %}
+          </td>
+          <td>{{ r.submitted_at }}</td>
+          <td>
+            <form method="post" class="d-flex gap-2 mb-2" style="flex-wrap:wrap;">
+              <input type="hidden" name="action" value="assign_class">
+              <input type="hidden" name="teacher_id" value="{{ r.user_id }}">
+              <input type="text" name="assigned_standard" class="form-control" placeholder="Standard" value="{{ r.assigned_standard or '' }}" style="max-width:110px;">
+              <input type="text" name="assigned_section" class="form-control" placeholder="Section" value="{{ r.assigned_section or '' }}" style="max-width:110px;">
+              <button class="btn btn-outline-primary">Assign Class</button>
+            </form>
+
+            <form method="post" class="d-flex gap-2" style="flex-wrap:wrap;">
+              <input type="hidden" name="action" value="review_verification">
+              <input type="hidden" name="verification_id" value="{{ r.id }}">
+              <select name="status" class="form-select" style="min-width:150px;">
+                <option value="approved">Approve</option>
+                <option value="rejected">Reject</option>
+              </select>
+              <input type="text" name="notes" class="form-control" placeholder="Optional notes">
+              <button class="btn btn-brand">Save</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted">No verification requests found.</p>
+  {% endif %}
+</div>
+{% endblock %}

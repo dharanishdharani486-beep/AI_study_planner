@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="shell-card" style="padding:24px; max-width: 900px; margin: 0 auto;">
+    <h3 class="section-title mb-4">Available School Exams</h3>
+    <p class="text-muted mb-4">You can take exams matching your class ({{ student_standard }}) and section ({{ student_section }}).</p>
+
+    {% if exams %}
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        {% for exam in exams %}
+        <div class="col">
+            <div class="card h-100 shadow-sm border-0 bg-light p-3">
+                <div class="card-body">
+                    <h5 class="card-title text-brand">{{ exam.title }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ exam.subject }}</h6>
+                    <div class="mt-3">
+                        <span class="badge bg-secondary me-2">Marks: {{ exam.total_marks }}</span>
+                        <span class="badge bg-secondary me-2">Duration: {{ exam.duration }} mins</span>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0 mt-3 d-flex justify-content-between align-items-center">
+                    <span class="text-muted small">By {{ exam.teacher_name }}</span>
+                    {% if exam.id in attempted_ids %}
+                        <span class="badge bg-success">Attempted (Scored {{ exam.student_score }}/50)</span>
+                    {% else %}
+                        <a href="/student/take_exam/{{ exam.id }}" class="btn btn-brand btn-sm">Start Exam</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <h4 class="text-muted">No exams available for your class at this moment.</h4>
+        <p>Check back later once your teacher uploads an exam.</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .text-brand { color: #1a73e8; }
+    .btn-brand {
+        background-color: #1a73e8;
+        color: white;
+    }
+    .btn-brand:hover {
+        background-color: #1557b0;
+        color: white;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="shell-card" style="padding:24px; max-width: 900px; margin: 0 auto;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="section-title mb-1">Exam Results: {{ exam.title }}</h3>
+            <p class="text-muted mb-0">{{ exam.subject }} · {{ exam.total_marks }} Marks</p>
+        </div>
+        <a href="/teacher/dashboard" class="btn btn-outline-secondary">Back to Dashboard</a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Student Name</th>
+                    <th>Score</th>
+                    <th>Percentage</th>
+                    <th>Submitted At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if results %}
+                    {% for res in results %}
+                    <tr>
+                        <td>{{ res.student_name }}</td>
+                        <td>
+                            <span class="fw-bold {% if res.score < 20 %}text-danger{% elif res.score > 40 %}text-success{% else %}text-primary{% endif %}">
+                                {{ res.score }}
+                            </span> / 50
+                        </td>
+                        <td>{{ (res.score / 50 * 100) | round(1) }}%</td>
+                        <td class="text-muted">{{ res.submitted_at }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">No student has attempted this exam yet.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

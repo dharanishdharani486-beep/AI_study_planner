@@ -4,23 +4,346 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ title or 'AI Study Coach' }}</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" integrity="sha384-..." crossorigin="anonymous">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <style>
+      :root {
+        --bg-1: #f6efe5;
+        --bg-2: #d9efe9;
+        --bg-3: #f7fafc;
+        --ink: #132238;
+        --muted: #5f6f81;
+        --card: rgba(255, 255, 255, 0.78);
+        --line: rgba(19, 34, 56, 0.1);
+        --brand: #0d7c66;
+        --brand-deep: #0d5e50;
+        --accent: #ff8552;
+        --accent-soft: #fff0e7;
+        --shadow: 0 24px 60px rgba(28, 45, 74, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        font-family: 'Manrope', sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(255, 133, 82, 0.22), transparent 26%),
+          radial-gradient(circle at top right, rgba(13, 124, 102, 0.16), transparent 24%),
+          linear-gradient(135deg, var(--bg-1) 0%, var(--bg-3) 44%, var(--bg-2) 100%);
+        background-attachment: fixed;
+      }
+
+      body::before,
+      body::after {
+        content: '';
+        position: fixed;
+        border-radius: 999px;
+        filter: blur(12px);
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      body::before {
+        width: 280px;
+        height: 280px;
+        top: 88px;
+        right: -80px;
+        background: rgba(255, 133, 82, 0.14);
+      }
+
+      body::after {
+        width: 220px;
+        height: 220px;
+        bottom: 40px;
+        left: -60px;
+        background: rgba(13, 124, 102, 0.14);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .app-frame {
+        position: relative;
+        z-index: 1;
+      }
+
+      .shell-nav {
+        margin: 20px auto 0;
+        width: min(1180px, calc(100% - 24px));
+        padding: 12px 18px;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        border-radius: 24px;
+        background: rgba(19, 34, 56, 0.84);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 50px rgba(12, 27, 45, 0.24);
+      }
+
+      .navbar-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #fff;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.02rem;
+        letter-spacing: 0.02em;
+      }
+
+      .brand-badge {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        border-radius: 14px;
+        color: #102331;
+        background: linear-gradient(135deg, #ffd16f, #ff8552);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+      }
+
+      .navbar-brand:hover,
+      .navbar-brand:focus {
+        color: #fff;
+      }
+
+      .nav-link {
+        color: rgba(255, 255, 255, 0.72) !important;
+        font-weight: 600;
+        border-radius: 999px;
+        padding: 10px 14px !important;
+        transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
+      }
+
+      .nav-link:hover,
+      .nav-link:focus {
+        color: #fff !important;
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-1px);
+      }
+
+      .navbar-toggler {
+        border: none;
+        box-shadow: none !important;
+      }
+
+      .app-shell {
+        width: min(1180px, calc(100% - 24px));
+        margin: 22px auto 48px;
+      }
+
+      .shell-card {
+        border: 1px solid rgba(255, 255, 255, 0.55);
+        border-radius: 28px;
+        background: var(--card);
+        backdrop-filter: blur(18px);
+        box-shadow: var(--shadow);
+      }
+
+      .section-title {
+        font-family: 'Space Grotesk', sans-serif;
+        letter-spacing: -0.03em;
+      }
+
+      .field-caption {
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #24435f;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .text-muted {
+        color: var(--muted) !important;
+      }
+
+      .btn {
+        border-radius: 16px;
+        font-weight: 700;
+      }
+
+      .btn-brand {
+        color: #fff;
+        border: none;
+        background: linear-gradient(135deg, var(--brand), var(--brand-deep));
+        box-shadow: 0 16px 34px rgba(13, 124, 102, 0.28);
+      }
+
+      .btn-brand:hover,
+      .btn-brand:focus {
+        color: #fff;
+        background: linear-gradient(135deg, #0f8d74, #0d6a59);
+      }
+
+      .form-control,
+      .form-select {
+        min-height: 52px;
+        border-radius: 16px;
+        border: 1px solid rgba(19, 34, 56, 0.12);
+        background: rgba(255, 255, 255, 0.8);
+      }
+
+      .form-control:focus,
+      .form-select:focus {
+        border-color: rgba(13, 124, 102, 0.35);
+        box-shadow: 0 0 0 0.2rem rgba(13, 124, 102, 0.12);
+      }
+
+      .alert {
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        border-radius: 18px;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 14px 30px rgba(18, 31, 52, 0.08);
+      }
+
+      .page-auth .shell-nav {
+        background: rgba(18, 29, 45, 0.7);
+      }
+
+      .focus-mini-widget {
+        position: fixed;
+        right: 18px;
+        bottom: 20px;
+        z-index: 1200;
+        display: none;
+        gap: 8px;
+        min-width: 250px;
+        max-width: min(88vw, 310px);
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        background: rgba(19, 34, 56, 0.9);
+        color: #eef7ff;
+        text-decoration: none;
+        box-shadow: 0 20px 44px rgba(11, 23, 39, 0.35);
+        backdrop-filter: blur(14px);
+        transition: transform 180ms ease, box-shadow 180ms ease;
+      }
+
+      .focus-mini-widget:hover,
+      .focus-mini-widget:focus {
+        transform: translateY(-2px);
+        box-shadow: 0 24px 48px rgba(11, 23, 39, 0.4);
+        color: #eef7ff;
+      }
+
+      .focus-mini-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .focus-mini-kicker {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        opacity: 0.75;
+        font-weight: 800;
+      }
+
+      .focus-mini-time {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.24rem;
+        letter-spacing: -0.03em;
+      }
+
+      .focus-mini-topic {
+        font-size: 0.84rem;
+        opacity: 0.88;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .focus-global-popup {
+        position: fixed;
+        right: 18px;
+        top: 92px;
+        z-index: 1300;
+        width: min(92vw, 340px);
+        display: none;
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(13, 124, 102, 0.3);
+        background: rgba(230, 255, 247, 0.95);
+        color: #0f4f43;
+        box-shadow: 0 16px 30px rgba(9, 43, 34, 0.2);
+      }
+
+      .focus-global-popup.show {
+        display: block;
+        animation: focusPopupIn 220ms ease;
+      }
+
+      @keyframes focusPopupIn {
+        from { opacity: 0; transform: translateY(-6px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @media (max-width: 991px) {
+        .shell-nav,
+        .app-shell {
+          width: min(100% - 18px, 1180px);
+        }
+
+        .shell-nav {
+          padding: 10px 14px;
+        }
+
+        .focus-mini-widget,
+        .focus-global-popup {
+          right: 10px;
+        }
+      }
+    </style>
+    {% block page_styles %}{% endblock %}
 </head>
-<body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="{{ url_for('dashboard') }}">AI Study Coach</a>
+<body class="app-body {% block body_class %}{% endblock %}"
+  data-server-user-type="{{ (session.get('student_type') or (current_profile.student_type if current_profile and current_profile.student_type else 'college')) | lower }}"
+  data-auth-nonce="{{ session.get('auth_nonce', '') }}">
+<div class="app-frame">
+<nav class="navbar navbar-expand-lg shell-nav">
+  <div class="container-fluid px-0">
+    <a class="navbar-brand" href="{{ url_for('dashboard') if session.user_id else url_for('login') }}">
+      <span class="brand-badge">AI</span>
+      <span>Study Coach</span>
+    </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
       <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
         {% if session.user_id %}
+          {% set role = session.get('role', 'student') %}
           <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
+
+          {% if role == 'teacher' %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher_dashboard') }}">Teacher Dashboard</a></li>
+          {% if teacher_verification_enabled %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher_register_verification') }}">Verification</a></li>
+          {% endif %}
+          {% elif role == 'admin' %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_teacher_approvals') }}">Teacher Approvals</a></li>
+          {% else %}
           <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('subject_planner') }}">Planner</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('materials_page') }}">Materials</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('weekly_test_page') }}">Weekly Test</a></li>
+          {% if current_profile and current_profile.student_type == 'school' %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('homework') }}">Homework</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('exams') }}">Exams</a></li>
+          {% endif %}
           <li class="nav-item"><a class="nav-link" href="{{ url_for('ai_chat') }}">AI Chat</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('focus_mode') }}">Focus</a></li>
+          {% endif %}
+
           <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
         {% else %}
           <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
@@ -30,7 +353,7 @@
     </div>
   </div>
 </nav>
-<div class="container">
+<main class="app-shell">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, msg in messages %}
@@ -40,8 +363,132 @@
         {% endfor %}
       {% endif %}
     {% endwith %}
+    <script src="{{ url_for('static', filename='js/focusTimer.js') }}"></script>
     {% block content %}{% endblock %}
+</main>
 </div>
+<a id="focusMiniWidget" class="focus-mini-widget" href="{{ url_for('focus_mode') }}" aria-live="polite">
+  <div class="focus-mini-top">
+    <span id="focusMiniStatus" class="focus-mini-kicker">Focus Session Running</span>
+    <span id="focusMiniTime" class="focus-mini-time">00:00</span>
+  </div>
+  <div id="focusMiniTopic" class="focus-mini-topic">Topic</div>
+</a>
+<div id="focusGlobalPopup" class="focus-global-popup" role="status" aria-live="polite"></div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+<script>
+  (function () {
+    const USER_TYPE_KEY = 'userType';
+    const AUTH_NONCE_KEY = 'app_auth_nonce';
+    const FOCUS_STORAGE_KEYS = [
+      'focus_selected_subject_v1',
+      'focus_selected_topic_v1',
+      'focus_notes_session_active_v1',
+      'focus_active_session_v1',
+      'focus_pending_completion_v1'
+    ];
+    const body = document.body;
+    const serverType = String((body && body.dataset && body.dataset.serverUserType) || '').toLowerCase();
+    const authNonce = String((body && body.dataset && body.dataset.authNonce) || '');
+
+    function sanitizeUserType(value) {
+      return value === 'school' || value === 'college' ? value : 'college';
+    }
+
+    function clearFocusStorageForNewSession() {
+      FOCUS_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+      sessionStorage.removeItem('focus_selected_subject_v1');
+      sessionStorage.removeItem('focus_selected_topic_v1');
+      if (window.FocusTimer && typeof window.FocusTimer.stopSession === 'function') {
+        window.FocusTimer.stopSession();
+      }
+    }
+
+    function syncAuthNonce() {
+      if (!authNonce) return;
+      const previousNonce = localStorage.getItem(AUTH_NONCE_KEY) || '';
+      if (previousNonce && previousNonce !== authNonce) {
+        clearFocusStorageForNewSession();
+      }
+      localStorage.setItem(AUTH_NONCE_KEY, authNonce);
+    }
+
+    function getUserType() {
+      const next = sanitizeUserType(serverType || 'college');
+      localStorage.setItem(USER_TYPE_KEY, next);
+      console.log('User Type:', next);
+      return next;
+    }
+
+    function setUserType(userType) {
+      const next = sanitizeUserType(String(userType || '').toLowerCase());
+      const previous = localStorage.getItem(USER_TYPE_KEY);
+      localStorage.setItem(USER_TYPE_KEY, next);
+      if (previous !== next) {
+        window.dispatchEvent(new CustomEvent('app-user-type-changed', { detail: { userType: next } }));
+      }
+      console.log('User Type:', next);
+      return next;
+    }
+
+    window.getUserType = getUserType;
+    window.setUserType = setUserType;
+    syncAuthNonce();
+    getUserType();
+
+    window.addEventListener('storage', (event) => {
+      if (event.key === USER_TYPE_KEY && event.newValue) {
+        const synced = sanitizeUserType(String(event.newValue).toLowerCase());
+        if (localStorage.getItem(USER_TYPE_KEY) !== synced) {
+          localStorage.setItem(USER_TYPE_KEY, synced);
+        }
+      }
+    });
+  })();
+
+  (function () {
+    if (!window.FocusTimer) return;
+
+    const widget = document.getElementById('focusMiniWidget');
+    const statusEl = document.getElementById('focusMiniStatus');
+    const timeEl = document.getElementById('focusMiniTime');
+    const topicEl = document.getElementById('focusMiniTopic');
+    const popup = document.getElementById('focusGlobalPopup');
+
+    function showPopup(message) {
+      popup.textContent = message;
+      popup.classList.add('show');
+      setTimeout(() => {
+        popup.classList.remove('show');
+      }, 4200);
+    }
+
+    function updateGlobalWidget() {
+      const completion = FocusTimer.completeSessionIfNeeded();
+      if (completion) {
+        showPopup('Session completed for ' + completion.topic + ' 🎉');
+      }
+
+      const state = FocusTimer.getRemainingTime();
+      if (!state.active) {
+        widget.style.display = 'none';
+        return;
+      }
+
+      widget.style.display = 'grid';
+      statusEl.textContent = state.isPaused ? 'Focus Session Paused' : 'Focus Session Running';
+      timeEl.textContent = FocusTimer.formatSeconds(state.remainingSeconds);
+      topicEl.textContent = '📚 ' + (state.topic || 'Focus topic');
+    }
+
+    updateGlobalWidget();
+    setInterval(updateGlobalWidget, 1000);
+    window.addEventListener('storage', updateGlobalWidget);
+    window.addEventListener('focus-timer-updated', updateGlobalWidget);
+    window.addEventListener('focus-timer-paused', updateGlobalWidget);
+    window.addEventListener('focus-timer-resumed', updateGlobalWidget);
+    window.addEventListener('focus-session-completed', updateGlobalWidget);
+  })();
+</script>
 </body>
 </html>

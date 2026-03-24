@@ -1,0 +1,16 @@
+<html>
+<head><title>Student Exams</title></head>
+<body>
+    <h2>Available Exams</h2>
+    {% if exams %}
+      {% for exam in exams %}
+        <div>
+          <h3>{{ exam[1] }}</h3>
+          <a href="/student_take_exam/{{ exam[0] }}">Attend Exam</a>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p>No exams available</p>
+    {% endif %}
+</body>
+</html>

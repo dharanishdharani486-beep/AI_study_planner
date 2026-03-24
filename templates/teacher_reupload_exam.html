@@ -1,0 +1,317 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="shell-card" style="padding:24px; max-width: 900px; margin: 0 auto;">
+    <h3 class="section-title mb-4">Re-upload & Republish Exam</h3>
+    <p class="text-muted mb-4">Updating an exam will replace all existing questions and reset its creation timestamp for students. Previously submitted attempts are preserved but will reflect the old exam version.</p>
+
+    <form action="/teacher/update_reupload_exam/{{ exam.id }}" method="POST" id="reuploadExamForm">
+        <!-- Exam Meta -->
+        <div class="row g-3 mb-5 p-3 bg-light rounded border shadow-sm">
+            <div class="col-md-6">
+                <label class="field-caption">Exam Title</label>
+                <input name="title" class="form-control" value="{{ exam.title }}" required>
+            </div>
+            <div class="col-md-6">
+                <label class="field-caption">Subject</label>
+                <input name="subject" class="form-control" value="{{ exam.subject }}" required>
+            </div>
+            <div class="col-md-4">
+                <label class="field-caption">Class (Grade)</label>
+                <input name="standard" class="form-control" value="{{ exam.standard }}" required>
+            </div>
+            <div class="col-md-4">
+                <label class="field-caption">Section</label>
+                <input name="section" class="form-control" value="{{ exam.section }}" required>
+            </div>
+            <div class="col-md-4">
+                <label class="field-caption">Duration (Minutes)</label>
+                <input type="number" name="duration" class="form-control" value="{{ exam.duration }}" required>
+            </div>
+        </div>
+
+        <!-- Part 1: MCQs -->
+        <div class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="text-brand mb-0">PART I: Multiple Choice Questions (15-20)</h4>
+                <button type="button" class="btn btn-outline-primary btn-sm add-btn" data-part="1">+ Add MCQ</button>
+            </div>
+            <div id="part1_container">
+                {% for q in questions if q.part == 'PART1' %}
+                <div class="question-row border rounded p-3 mb-3 bg-white position-relative shadow-sm">
+                    <div class="row g-3">
+                        <input type="hidden" name="question_part[]" value="PART1">
+                        <input type="hidden" name="question_marks[]" value="1">
+                        <div class="col-12">
+                            <label class="field-caption">PART I: MCQ Text</label>
+                            <textarea name="question_text[]" class="form-control" rows="2" required>{{ q.question_text }}</textarea>
+                        </div>
+                        <div class="col-md-3"><input type="text" name="option_a[]" class="form-control" value="{{ q.option_a }}" placeholder="A" required></div>
+                        <div class="col-md-3"><input type="text" name="option_b[]" class="form-control" value="{{ q.option_b }}" placeholder="B" required></div>
+                        <div class="col-md-3"><input type="text" name="option_c[]" class="form-control" value="{{ q.option_c }}" placeholder="C" required></div>
+                        <div class="col-md-3"><input type="text" name="option_d[]" class="form-control" value="{{ q.option_d }}" placeholder="D" required></div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold">Correct Answer</label>
+                            <select name="correct_answer[]" class="form-select">
+                                <option value="A" {% if q.correct_answer == 'A' %}selected{% endif %}>Choice A</option>
+                                <option value="B" {% if q.correct_answer == 'B' %}selected{% endif %}>Choice B</option>
+                                <option value="C" {% if q.correct_answer == 'C' %}selected{% endif %}>Choice C</option>
+                                <option value="D" {% if q.correct_answer == 'D' %}selected{% endif %}>Choice D</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-2 remove-btn" title="Remove"></button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Part 2: Very Short Answers -->
+        <div class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="text-brand mb-0">PART II: Very Short Answers</h4>
+                <button type="button" class="btn btn-outline-primary btn-sm add-btn" data-part="2">+ Add Question</button>
+            </div>
+            <div id="part2_container">
+                {% for q in questions if q.part == 'PART2' %}
+                <div class="question-row border rounded p-3 mb-3 bg-white position-relative shadow-sm">
+                    <div class="row g-3">
+                        <input type="hidden" name="question_part[]" value="PART2">
+                        <div class="col-md-9">
+                            <label class="field-caption">PART II: Question Text</label>
+                            <textarea name="question_text[]" class="form-control" rows="2" required>{{ q.question_text }}</textarea>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="field-caption">Marks</label>
+                            <input type="number" name="question_marks[]" class="form-control marks-input" value="{{ q.marks }}" min="1" max="2" required>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-2 remove-btn" title="Remove"></button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Part 3: Short Answers -->
+        <div class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="text-brand mb-0">PART III: Short Answers (3 Marks)</h4>
+                <button type="button" class="btn btn-outline-primary btn-sm add-btn" data-part="3">+ Add Question</button>
+            </div>
+            <div id="part3_container">
+                {% for q in questions if q.part == 'PART3' %}
+                <div class="question-row border rounded p-3 mb-3 bg-white position-relative shadow-sm">
+                    <div class="row g-3">
+                        <input type="hidden" name="question_part[]" value="PART3">
+                        <input type="hidden" name="question_marks[]" value="3">
+                        <div class="col-12">
+                            <label class="field-caption">PART III: Short Answer (3 Marks)</label>
+                            <textarea name="question_text[]" class="form-control" rows="2" required>{{ q.question_text }}</textarea>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-2 remove-btn" title="Remove"></button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Part 4: Long Answer Either-Or -->
+        <div class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="text-brand mb-0">PART IV: Long Answers (Either/Or - 5 Marks)</h4>
+                <button type="button" class="btn btn-outline-primary btn-sm add-btn" data-part="4">+ Add Either-Or</button>
+            </div>
+            <div id="part4_container">
+                {% for q in questions if q.part == 'PART4' %}
+                <div class="question-row border rounded p-3 mb-3 bg-white position-relative shadow-sm">
+                    <div class="row g-3">
+                        <input type="hidden" name="question_part[]" value="PART4">
+                        <input type="hidden" name="question_marks[]" value="5">
+                        <div class="col-md-6 border-end">
+                            <label class="field-caption">Option (a)</label>
+                            <textarea name="part4_option_a[]" class="form-control" rows="3" required>{{ q.option_a }}</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="field-caption">Option (b)</label>
+                            <textarea name="part4_option_b[]" class="form-control" rows="3" required>{{ q.option_b }}</textarea>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-2 remove-btn" title="Remove"></button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="sticky-bottom text-center p-3 bg-white-75 backdrop-blur border-top">
+            <div id="marksWarning" class="alert alert-warning mb-2" style="display:none;"></div>
+            <div class="d-flex justify-content-center align-items-center gap-4">
+                <div class="h5 mb-0">Current Total: <span id="currentTotal" class="fw-bold text-primary">0</span> / 50</div>
+                <button type="submit" id="saveExamBtn" class="btn btn-warning btn-lg px-5 shadow">Republish Exam</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Templates remain the same -->
+<template id="template_part1">
+    <div class="question-row border rounded p-3 mb-3 bg-white position-relative shadow-sm">
+        <div class="row g-3">
+            <input type="hidden" name="question_part[]" value="PART1">
+            <input type="hidden" name="question_marks[]" value="1">
+            <div class="col-12">
+                <label class="field-caption">PART I: MCQ Text</label>
+                <textarea name="question_text[]" class="form-control" rows="2" required></textarea>
+            </div>
+            <div class="col-md-3"><input type="text" name="option_a[]" class="form-control" placeholder="A" required></div>
+            <div class="col-md-3"><input type="text" name="option_b[]" class="form-control" placeholder="B" required></div>
+            <div class="col-md-3"><input type="text" name="option_c[]" class="form-control" placeholder="C" required></div>
+            <div class="col-md-3"><input type="text" name="option_d[]" class="form-control" placeholder="D" required></div>
+            <div class="col-md-6">
+                <label class="small fw-bold">Correct Answer</label>
+                <select name="correct_answer[]" class="form-select">
+                    <option value="A">Choice A</option>
+                    <option value="B">Choice B</option>
+                    <option value="C">Choice C</option>
+                    <option value="D">Choice D</option>
+                </select>
+            </div>
+        </div>
+        <button type="button" class="btn-close position-absolute top-0 end-0 m-2 remove-btn" title="Remove"></button>
+    </div>
+</template>
+<!-- ... templates ... -->
+<template id="template_part2">
+    <div class="question-row border rounded p-3 mb-3 bg-white position-relative shadow-sm">
+        <div class="row g-3">
+            <input type="hidden" name="question_part[]" value="PART2">
+            <div class="col-md-9">
+                <label class="field-caption">PART II: Question Text</label>
+                <textarea name="question_text[]" class="form-control" rows="2" required></textarea>
+            </div>
+            <div class="col-md-3">
+                <label class="field-caption">Marks</label>
+                <input type="number" name="question_marks[]" class="form-control marks-input" value="1" min="1" max="2" required>
+            </div>
+        </div>
+        <button type="button" class="btn-close position-absolute top-0 end-0 m-2 remove-btn" title="Remove"></button>
+    </div>
+</template>
+
+<template id="template_part3">
+    <div class="question-row border rounded p-3 mb-3 bg-white position-relative shadow-sm">
+        <div class="row g-3">
+            <input type="hidden" name="question_part[]" value="PART3">
+            <input type="hidden" name="question_marks[]" value="3">
+            <div class="col-12">
+                <label class="field-caption">PART III: Short Answer (3 Marks)</label>
+                <textarea name="question_text[]" class="form-control" rows="2" required></textarea>
+            </div>
+        </div>
+        <button type="button" class="btn-close position-absolute top-0 end-0 m-2 remove-btn" title="Remove"></button>
+    </div>
+</template>
+
+<template id="template_part4">
+    <div class="question-row border rounded p-3 mb-3 bg-white position-relative shadow-sm">
+        <div class="row g-3">
+            <input type="hidden" name="question_part[]" value="PART4">
+            <input type="hidden" name="question_marks[]" value="5">
+            <div class="col-md-6 border-end">
+                <label class="field-caption">Option (a)</label>
+                <textarea name="part4_option_a[]" class="form-control" rows="3" required></textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="field-caption">Option (b)</label>
+                <textarea name="part4_option_b[]" class="form-control" rows="3" required></textarea>
+            </div>
+        </div>
+        <button type="button" class="btn-close position-absolute top-0 end-0 m-2 remove-btn" title="Remove"></button>
+    </div>
+</template>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const containers = {
+        '1': document.getElementById('part1_container'),
+        '2': document.getElementById('part2_container'),
+        '3': document.getElementById('part3_container'),
+        '4': document.getElementById('part4_container')
+    };
+    const templates = {
+        '1': document.getElementById('template_part1'),
+        '2': document.getElementById('template_part2'),
+        '3': document.getElementById('template_part3'),
+        '4': document.getElementById('template_part4')
+    };
+
+    const totalDisplay = document.getElementById('currentTotal');
+    const saveBtn = document.getElementById('saveExamBtn');
+    const warning = document.getElementById('marksWarning');
+
+    function calculateTotal() {
+        let total = 0;
+        let mcqCount = 0;
+        
+        document.querySelectorAll('input[name="question_marks[]"]').forEach(input => {
+            total += parseInt(input.value) || 0;
+        });
+        
+        document.querySelectorAll('input[name="question_part[]"]').forEach(input => {
+            if (input.value === 'PART1') mcqCount++;
+        });
+
+        totalDisplay.textContent = total;
+        
+        const mcqValid = mcqCount >= 15 && mcqCount <= 20;
+        const totalValid = total === 50;
+        
+        if (totalValid && mcqValid) {
+            saveBtn.disabled = false;
+            warning.style.display = 'none';
+        } else {
+            saveBtn.disabled = true;
+            warning.style.display = 'block';
+            let warnMsg = "";
+            if (!totalValid) warnMsg = "Total marks must be exactly 50.";
+            if (!mcqValid) warnMsg = "MCQs must be between 15 and 20.";
+            warning.textContent = warnMsg;
+        }
+    }
+
+    function addQuestion(part) {
+        const clone = templates[part].content.cloneNode(true);
+        containers[part].appendChild(clone);
+        
+        const newRow = containers[part].lastElementChild;
+        attachListeners(newRow);
+        calculateTotal();
+    }
+
+    function attachListeners(row) {
+        row.querySelector('.remove-btn').addEventListener('click', function() {
+            row.remove();
+            calculateTotal();
+        });
+
+        const marksInput = row.querySelector('.marks-input');
+        if (marksInput) {
+            marksInput.addEventListener('input', calculateTotal);
+        }
+    }
+
+    document.querySelectorAll('.question-row').forEach(row => attachListeners(row));
+    document.querySelectorAll('.add-btn').forEach(btn => {
+        btn.addEventListener('click', () => addQuestion(btn.dataset.part));
+    });
+
+    calculateTotal();
+});
+</script>
+
+<style>
+    .text-brand { color: #1a73e8; }
+    .btn-brand { background-color: #1a73e8; color: white; }
+    .btn-brand:hover { background-color: #1a73e8; opacity: 0.9; color: white; }
+    .question-row:hover { border-color: #1a73e8 !important; }
+    .sticky-bottom { z-index: 1000; bottom: 20px; background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); }
+</style>
+{% endblock %}

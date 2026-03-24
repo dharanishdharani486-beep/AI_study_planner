@@ -1,0 +1,472 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-grid" style="gap:22px;" data-active-section="{{ active_section or '' }}">
+  <div class="shell-card" style="padding:24px;">
+    <h3 class="section-title mb-2">Teacher Dashboard</h3>
+    <p class="text-muted">Upload subject materials and monitor weekly test violations.</p>
+
+    <div class="mb-3" style="padding:12px 14px; border:1px solid rgba(19,34,56,0.12); border-radius:12px; background:rgba(255,255,255,0.55);">
+      {% if teacher_standard and active_section %}
+        <strong>Assigned Class:</strong> {{ teacher_standard }} - {{ active_section }}
+      {% elif teacher_standard %}
+        <strong>Assigned Standard:</strong> {{ teacher_standard }}
+      {% else %}
+        <strong>Assigned Class:</strong> Not configured. Ask admin to assign your standard and section.
+      {% endif %}
+    </div>
+
+    {% if available_sections %}
+    <form method="get" class="row g-2 mb-3" style="max-width:420px;">
+      <div class="col-8">
+        <label class="field-caption">Section Filter</label>
+        <select class="form-select" name="section">
+          <option value="">Select section</option>
+          {% for sec in available_sections %}
+            <option value="{{ sec }}" {% if sec == active_section %}selected{% endif %}>{{ sec }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-4 d-flex align-items-end">
+        <button class="btn btn-outline-secondary w-100">Apply</button>
+      </div>
+    </form>
+    {% endif %}
+
+    <form id="materialForm" enctype="multipart/form-data">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="field-caption">Title</label>
+          <input name="title" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="field-caption">Subject</label>
+          <input name="subject" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="field-caption">Topic</label>
+          <input name="topic" class="form-control" required>
+        </div>
+        <div class="col-md-2">
+          <label class="field-caption">Type</label>
+          <select name="material_type" id="materialType" class="form-select">
+            <option value="file">File</option>
+            <option value="video">Video Link</option>
+          </select>
+        </div>
+        <div class="col-md-6" id="fileWrap">
+          <label class="field-caption">File</label>
+          <input type="file" name="material_file" class="form-control">
+        </div>
+        <div class="col-md-6" id="videoWrap" style="display:none;">
+          <label class="field-caption">Video URL</label>
+          <input type="url" name="video_link" class="form-control" placeholder="https://...">
+        </div>
+        <div class="col-md-12">
+          <button class="btn btn-brand">Upload Material</button>
+          <span id="uploadStatus" class="text-muted ms-2"></span>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="shell-card" style="padding:24px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4 class="section-title mb-0">Manage School Exams</h4>
+      <a href="/teacher/create_exam" class="btn btn-brand btn-sm">Create New Exam</a>
+    </div>
+    {% if school_exams %}
+      <div class="list-group">
+        {% for exam in school_exams %}
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{ exam.title }}</strong> · {{ exam.subject }} ({{ exam.standard }} - {{ exam.section }})
+            <br>
+            <small class="text-muted">Marks: {{ exam.total_marks }} · Duration: {{ exam.duration }} mins · {{ exam.attempt_count }} attempts</small>
+          </div>
+          <div class="d-flex gap-2">
+            <a href="/teacher/edit_exam/{{ exam.id }}" class="btn btn-outline-secondary btn-sm">Edit</a>
+            <a href="/teacher/reupload_exam/{{ exam.id }}" class="btn btn-outline-warning btn-sm">Re-upload</a>
+            <a href="/teacher/delete_exam/{{ exam.id }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete this exam and all its questions?')">Delete</a>
+            <a href="/teacher/view_exam_results/{{ exam.id }}" class="btn btn-outline-brand btn-sm">View Results</a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted">No exams created yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="shell-card" style="padding:24px;">
+    <h4 class="section-title mb-2">My Uploaded Materials</h4>
+    {% if materials %}
+      <ul class="list-group">
+        {% for item in materials %}
+        <li class="list-group-item">
+          <strong>{{ item.title }}</strong> · {{ item.subject }} / {{ item.topic }}
+          <span class="text-muted">({{ item.material_type }})</span>
+        </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted">No materials uploaded yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="shell-card" style="padding:24px;">
+    <h4 class="section-title mb-2">🚨 Violation Alerts {% if unread_notification_count %}<span class="badge bg-danger">{{ unread_notification_count }}</span>{% endif %}</h4>
+    {% if alerts %}
+      <div style="max-height: 320px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th style="text-align:left; padding: 0.55rem; border-bottom: 1px solid #ddd;">Time</th>
+              <th style="text-align:left; padding: 0.55rem; border-bottom: 1px solid #ddd;">Student</th>
+              <th style="text-align:left; padding: 0.55rem; border-bottom: 1px solid #ddd;">Violation</th>
+              <th style="text-align:left; padding: 0.55rem; border-bottom: 1px solid #ddd;">Score</th>
+              <th style="text-align:left; padding: 0.55rem; border-bottom: 1px solid #ddd;">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in alerts %}
+            <tr {% if a.is_high_risk %}style="background:#ffe8e8;"{% endif %}>
+              <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">{{ a.timestamp }}</td>
+              <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">{{ a.student_name }}</td>
+              <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">{{ a.violation_type }}</td>
+              <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">{{ a.suspicion_score }}{% if a.is_high_risk %} ⚠️{% endif %}</td>
+              <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">{{ a.details or '-' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted">No violation alerts yet.</p>
+    {% endif %}
+
+    <div class="mt-3">
+      <h6 class="mb-2">High-Risk Students</h6>
+      {% if high_risk_students %}
+      <ul class="list-group">
+        {% for hs in high_risk_students %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>{{ hs.student_name }}</span>
+            <span class="badge bg-warning text-dark">Score {{ hs.max_score }} · {{ hs.total_violations }} alerts</span>
+          </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-muted mb-0">No high-risk students yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <section style="margin-top: 2rem;">
+    <h2>{{ student_group_label }}</h2>
+    {% if students %}
+      <ul class="list-group mb-3">
+        {% for student in students %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span>{{ student.username }}</span>
+          <span class="text-muted small">{{ student.standard }}{{ ' - ' + student.section if student.section else '' }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted">No students found for this assigned class and section.</p>
+    {% endif %}
+
+    <h2>Student Activity Monitor</h2>
+    <style>
+      .activity-row-violation { background:#ffe8e8; }
+      .activity-row-success { background:#e8fff0; }
+    </style>
+    <form id="activity-filters" style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: end; margin-bottom: 0.75rem;">
+      <div>
+        <label for="activity-section">Section</label><br>
+        <select id="activity-section" name="section">
+          <option value="">All Sections</option>
+          {% if teacher_section %}
+            <option value="{{ teacher_section }}" selected>{{ teacher_section }}</option>
+          {% else %}
+            {% for sec in available_sections %}
+              <option value="{{ sec }}" {% if sec == active_section %}selected{% endif %}>{{ sec }}</option>
+            {% endfor %}
+          {% endif %}
+        </select>
+      </div>
+      <div>
+        <label for="activity-student">Student</label><br>
+        <select id="activity-student" name="student_id">
+          <option value="">All Assigned Students</option>
+          {% for student in students %}
+            <option value="{{ student.id }}">{{ student.username }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="activity-type">Action</label><br>
+        <select id="activity-type" name="action_type">
+          <option value="">All Actions</option>
+          <option value="login">Login</option>
+          <option value="logout">Logout</option>
+          <option value="subject_selected">Subject Selected</option>
+          <option value="add_homework">Add Homework</option>
+          <option value="start_task">Start Task</option>
+          <option value="complete_task">Complete Task</option>
+          <option value="focus_started">Focus Started</option>
+          <option value="focus_completed">Focus Completed</option>
+          <option value="focus_stopped">Focus Stopped</option>
+          <option value="start_exam">Start Exam</option>
+          <option value="submit_exam">Submit Exam</option>
+          <option value="weekly_test_started">Weekly Test Started</option>
+          <option value="weekly_test_submitted">Weekly Test Submitted</option>
+          <option value="exam_violation">Exam Violation</option>
+          <option value="tab_switch_detected">Tab Switch/Violation</option>
+          <option value="fullscreen_exit">Fullscreen Exit</option>
+          <option value="copy_attempt">Copy Attempt</option>
+          <option value="paste_attempt">Paste Attempt</option>
+          <option value="multiple_face">Multiple Face</option>
+          <option value="unusual_fast_answering">Unusual Fast Answering</option>
+          <option value="test_violation">Test Violation (legacy)</option>
+        </select>
+      </div>
+      <div>
+        <label for="activity-subject">Subject</label><br>
+        <select id="activity-subject" name="subject">
+          <option value="">All Subjects</option>
+          {% for subject in available_subjects %}
+            <option value="{{ subject }}" {% if subject == selected_subject %}selected{% endif %}>{{ subject }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="activity-date">Date</label><br>
+        <input type="date" id="activity-date" name="date">
+      </div>
+      <button type="submit">Apply</button>
+      <button type="button" id="activity-reset">Reset</button>
+    </form>
+
+    <small style="display:block; margin-bottom: 0.5rem; color: #666;">
+      Auto-refreshes every 8 seconds.
+    </small>
+
+    <div style="max-height: 340px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr>
+            <th style="text-align:left; padding: 0.55rem; border-bottom: 1px solid #ddd;">Time</th>
+            <th style="text-align:left; padding: 0.55rem; border-bottom: 1px solid #ddd;">Student</th>
+            <th style="text-align:left; padding: 0.55rem; border-bottom: 1px solid #ddd;">Action</th>
+            <th style="text-align:left; padding: 0.55rem; border-bottom: 1px solid #ddd;">Subject</th>
+            <th style="text-align:left; padding: 0.55rem; border-bottom: 1px solid #ddd;">Details</th>
+          </tr>
+        </thead>
+        <tbody id="activity-body">
+          {% if activities %}
+            {% for activity in activities %}
+            {% set is_violation = activity.action_type in ['exam_violation', 'tab_switch_detected', 'test_violation', 'fullscreen_exit', 'copy_attempt', 'paste_attempt', 'multiple_face', 'unusual_fast_answering'] %}
+            {% set is_success = activity.action_type in ['weekly_test_submitted', 'submit_exam', 'complete_task', 'focus_completed'] %}
+            <tr class="{% if is_violation %}activity-row-violation{% elif is_success %}activity-row-success{% endif %}">
+              <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">{{ activity.timestamp }}</td>
+              <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">{{ activity.student_name }}</td>
+              <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">{{ activity.action_type }}</td>
+              <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">{{ activity.subject or '-' }}</td>
+              <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">{{ activity.description }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td colspan="5" style="padding: 0.75rem;">No activity found for assigned students yet.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section style="margin-top: 1.25rem;">
+    <h2>Exam Attempts (Teacher View)</h2>
+    <small style="display:block; margin-bottom: 0.5rem; color: #666;">
+      Shows only exam attempts linked to your teacher account.
+    </small>
+    <div style="max-height: 320px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr>
+            <th style="text-align:left; padding: 0.55rem; border-bottom: 1px solid #ddd;">Timestamp</th>
+            <th style="text-align:left; padding: 0.55rem; border-bottom: 1px solid #ddd;">Student</th>
+            <th style="text-align:left; padding: 0.55rem; border-bottom: 1px solid #ddd;">Exam ID</th>
+            <th style="text-align:left; padding: 0.55rem; border-bottom: 1px solid #ddd;">Class</th>
+            <th style="text-align:left; padding: 0.55rem; border-bottom: 1px solid #ddd;">Score</th>
+          </tr>
+        </thead>
+        <tbody id="exam-attempt-body">
+          {% if exam_attempt_rows %}
+            {% for attempt in exam_attempt_rows %}
+            <tr>
+              <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">{{ attempt.timestamp or attempt.submitted_at }}</td>
+              <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">{{ attempt.student_name }}</td>
+              <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">{{ attempt.exam_id or attempt.exam_session_id }}</td>
+              <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">{{ (attempt.class_standard or '') ~ ('-' ~ attempt.class_section if attempt.class_section else '') }}</td>
+              <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">{{ attempt.score }} / {{ attempt.total_questions }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td colspan="5" style="padding: 0.75rem;">No exam attempts found yet.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <script>
+  (function() {
+    const form = document.getElementById('activity-filters');
+    const resetBtn = document.getElementById('activity-reset');
+    const tableBody = document.getElementById('activity-body');
+    const examAttemptBody = document.getElementById('exam-attempt-body');
+
+    function rowColor(actionType) {
+      if (['exam_violation', 'tab_switch_detected', 'test_violation', 'fullscreen_exit', 'copy_attempt', 'paste_attempt', 'multiple_face', 'unusual_fast_answering'].includes(actionType)) {
+        return 'activity-row-violation';
+      }
+      if (['weekly_test_submitted', 'submit_exam', 'complete_task', 'focus_completed'].includes(actionType)) {
+        return 'activity-row-success';
+      }
+      return '';
+    }
+
+    function renderRows(activities) {
+      if (!activities || !activities.length) {
+        tableBody.innerHTML = '<tr><td colspan="5" style="padding: 0.75rem;">No activity found for selected filters.</td></tr>';
+        return;
+      }
+
+      tableBody.innerHTML = activities.map(function(activity) {
+        return `
+          <tr class="${rowColor(activity.action_type)}">
+            <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">${activity.timestamp || ''}</td>
+            <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">${activity.student_name || ''}</td>
+            <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">${activity.action_type || ''}</td>
+            <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">${activity.subject || '-'}</td>
+            <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">${activity.description || ''}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function getFilterQuery() {
+      const params = new URLSearchParams();
+      const student = document.getElementById('activity-student').value;
+      const action = document.getElementById('activity-type').value;
+      const subject = document.getElementById('activity-subject').value;
+      const section = document.getElementById('activity-section').value;
+      const date = document.getElementById('activity-date').value;
+      if (student) params.append('student_id', student);
+      if (action) params.append('action_type', action);
+      if (subject) params.append('subject', subject);
+      if (date) params.append('date', date);
+      if (section) params.append('section', section);
+      return params.toString();
+    }
+
+    async function fetchActivities() {
+      try {
+        const query = getFilterQuery();
+        const url = query ? `/teacher/activity_logs?${query}` : '/teacher/activity_logs';
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          return;
+        }
+        renderRows(data.activities || []);
+      } catch (e) {
+        console.error('Activity fetch failed', e);
+      }
+    }
+
+    function renderExamAttemptRows(rows) {
+      if (!examAttemptBody) return;
+      if (!rows || !rows.length) {
+        examAttemptBody.innerHTML = '<tr><td colspan="5" style="padding: 0.75rem;">No exam attempts found for selected filters.</td></tr>';
+        return;
+      }
+
+      examAttemptBody.innerHTML = rows.map(function(row) {
+        const classLabel = [row.class_standard || '', row.class_section || ''].filter(Boolean).join('-');
+        return `
+          <tr>
+            <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">${row.timestamp || row.submitted_at || ''}</td>
+            <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">${row.student_name || ''}</td>
+            <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">${row.exam_id || row.exam_session_id || ''}</td>
+            <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">${classLabel || '-'}</td>
+            <td style="padding: 0.55rem; border-bottom: 1px solid #f0f0f0;">${(row.score ?? 0)} / ${(row.total_questions ?? 0)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function fetchExamAttempts() {
+      try {
+        const query = getFilterQuery();
+        const url = query ? `/teacher/exam_attempts?${query}` : '/teacher/exam_attempts';
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          return;
+        }
+        renderExamAttemptRows(data.exam_attempts || []);
+      } catch (e) {
+        console.error('Exam attempts fetch failed', e);
+      }
+    }
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      fetchActivities();
+      fetchExamAttempts();
+    });
+
+    resetBtn.addEventListener('click', function() {
+      form.reset();
+      fetchActivities();
+      fetchExamAttempts();
+    });
+
+    setInterval(fetchActivities, 8000);
+    setInterval(fetchExamAttempts, 8000);
+  })();
+  </script>
+</div>
+
+<script>
+  (function () {
+    const form = document.getElementById('materialForm');
+    const typeSelect = document.getElementById('materialType');
+    const fileWrap = document.getElementById('fileWrap');
+    const videoWrap = document.getElementById('videoWrap');
+    const status = document.getElementById('uploadStatus');
+
+    function syncType() {
+      const isVideo = typeSelect.value === 'video';
+      fileWrap.style.display = isVideo ? 'none' : 'block';
+      videoWrap.style.display = isVideo ? 'block' : 'none';
+    }
+
+    typeSelect.addEventListener('change', syncType);
+    syncType();
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      status.textContent = 'Uploading...';
+      const formData = new FormData(form);
+      const resp = await fetch('/upload_material', { method: 'POST', body: formData });
+      const data = await resp.json();
+      status.textContent = data.message || 'Done';
+      if (data.ok) {
+        setTimeout(() => window.location.reload(), 600);
+      }
+    });
+  })();
+</script>
+{% endblock %}

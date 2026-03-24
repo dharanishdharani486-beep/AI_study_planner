@@ -1,19 +1,388 @@
 ﻿{% extends 'base.html' %}
+{% block page_styles %}
+<style>
+  .profile-wrap { max-width: 760px; margin: 0 auto; display: grid; gap: 20px; }
+  .profile-section { padding: 28px; }
+  .profile-section h5 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: -0.03em;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(19,34,56,0.08);
+  }
+  .section-icon {
+    display: inline-flex; width: 32px; height: 32px;
+    border-radius: 10px; align-items: center; justify-content: center;
+    font-size: 1rem; margin-right: 8px;
+  }
+  .icon-info  { background: #e3f0ff; }
+  .icon-lock  { background: #fff1dc; }
+  .icon-book  { background: #def6ef; }
+  .icon-goal  { background: #fff8d8; }
+
+  .subjects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .subj-check {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; border-radius: 14px;
+    border: 1px solid rgba(19,34,56,0.1);
+    background: rgba(255,255,255,0.5);
+    cursor: pointer; transition: border-color 150ms, background 150ms;
+  }
+  .subj-check:has(input:checked) {
+    border-color: var(--brand);
+    background: rgba(13,124,102,0.07);
+  }
+  .subj-check input { display: none; }
+  .subj-check .dot {
+    width: 18px; height: 18px; border-radius: 6px; flex-shrink: 0;
+    border: 2px solid rgba(19,34,56,0.2);
+    background: #fff; transition: background 150ms, border-color 150ms;
+  }
+  .subj-check:has(input:checked) .dot {
+    background: var(--brand); border-color: var(--brand);
+  }
+  .board-pills { display: flex; flex-wrap: wrap; gap: 10px; }
+  .board-opt { display: none; }
+  .board-label {
+    padding: 10px 20px; border-radius: 999px; font-weight: 700; font-size: 0.9rem;
+    border: 1.5px solid rgba(19,34,56,0.12); cursor: pointer;
+    transition: border-color 150ms, background 150ms, color 150ms;
+  }
+  .board-opt:checked + .board-label {
+    background: var(--brand);
+    color: #fff;
+    border-color: var(--brand);
+    box-shadow: 0 8px 18px rgba(13,124,102,0.24);
+  }
+  .board-opt:disabled + .board-label {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .type-radio { display: none; }
+  .type-card {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; padding: 24px 16px; border-radius: 22px;
+    border: 2px solid rgba(19,34,56,0.1); background: rgba(255,255,255,0.5);
+    cursor: pointer; text-align: center;
+    transition: border-color 180ms, background 180ms, box-shadow 180ms;
+  }
+  .type-card .type-icon { font-size: 2.4rem; }
+  .type-card .type-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.18rem; font-weight: 700; letter-spacing: -0.03em;
+  }
+  .type-card .type-desc { font-size: 0.85rem; color: var(--muted); }
+  .type-radio:checked + .type-card {
+    border-color: var(--brand);
+    background: rgba(13,124,102,0.07);
+    box-shadow: 0 0 0 4px rgba(13,124,102,0.12);
+  }
+</style>
+{% endblock %}
 {% block content %}
-<h2>Student Profile</h2>
-<form method="post">
-  <div class="mb-3"><label>Full name</label><input name="full_name" class="form-control" value="{{ profile.full_name if profile }}"></div>
-  <div class="mb-3"><label>College/School</label><input name="school" class="form-control" value="{{ profile.school if profile }}"></div>
-  <div class="mb-3"><label>Department</label><input name="department" class="form-control" value="{{ profile.department if profile }}"></div>
-  <div class="mb-3"><label>Subjects (choose at least 1)</label>
-    <div class="form-check">
-      {% for subj in subjects %}
-      <input class="form-check-input" type="checkbox" name="subjects" value="{{ subj }}" id="subj-{{ loop.index }}" {% if profile and subj in (profile.subjects or '') %}checked{% endif %}> 
-      <label class="form-check-label" for="subj-{{ loop.index }}">{{ subj }}</label><br>
-      {% endfor %}
-    </div>
+<div class="profile-wrap">
+
+  <div>
+    <h2 class="section-title mb-1">Your Profile</h2>
+    <p class="text-muted">Keep this up to date — AI suggestions and reminders adjust based on your student type.</p>
   </div>
-  <div class="mb-3"><label>Daily study goal (minutes)</label><input type="number" name="daily_goal" class="form-control" min="30" value="{{ profile.daily_goal if profile else 60 }}"></div>
-  <button class="btn btn-primary">Save profile</button>
-</form>
+
+  {% if is_teacher %}
+  <form method="post" id="teacherProfileForm">
+    <div class="shell-card profile-section mb-4">
+      <h5><span class="section-icon icon-info">👩‍🏫</span>Teacher Assignment</h5>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="field-caption">Assigned Class / Grade</label>
+          <select name="assigned_standard" class="form-select" required>
+            <option value="">Select class...</option>
+            {% for grade in all_grades %}
+            <option value="{{ grade }}" {% if teacher_standard == grade %}selected{% endif %}>{{ grade }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="field-caption">Assigned Section</label>
+          <select name="assigned_section" class="form-select" required>
+            <option value="">Select section...</option>
+            {% for sec in section_choices %}
+            <option value="{{ sec }}" {% if teacher_section == sec %}selected{% endif %}>{{ sec }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-12">
+          <label class="field-caption">Subject (Optional)</label>
+          <input name="teacher_subject" class="form-control" value="{{ teacher_subject }}" placeholder="e.g. Mathematics">
+          <small class="text-muted">This subject is used for teacher profile and dashboard context.</small>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-brand btn-lg px-5">Save Profile</button>
+  </form>
+  {% else %}
+
+  <form method="post" id="profileForm">
+
+    <!-- ── Student Type ── -->
+    <div class="shell-card profile-section mb-4">
+      <h5><span class="section-icon icon-info">🎓</span>I am a...</h5>
+      <div class="type-toggle">
+        <input type="radio" name="student_type" id="type_school" value="school" class="type-radio"
+               {% if profile and profile.student_type == 'school' %}checked{% else %}{% if not profile %}{% endif %}{% endif %}
+               onchange="onTypeChange()">
+        <label for="type_school" class="type-card">
+          <span class="type-icon">🏫</span>
+          <span class="type-name">School Student</span>
+          <span class="type-desc">Grades 1 – 12 · Homework tracker · Exam planner · Parent email</span>
+        </label>
+
+        <input type="radio" name="student_type" id="type_college" value="college" class="type-radio"
+               {% if not profile or profile.student_type != 'school' %}checked{% endif %}
+               onchange="onTypeChange()">
+        <label for="type_college" class="type-card">
+          <span class="type-icon">🎓</span>
+          <span class="type-name">College Student</span>
+          <span class="type-desc">Undergraduate · Postgraduate · Professional course · Department subjects</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- ── Basic info ── -->
+    <div class="shell-card profile-section mb-4">
+      <h5><span class="section-icon icon-info">👤</span>Basic Information</h5>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="field-caption">Full name</label>
+          <input name="full_name" class="form-control" value="{{ profile.full_name if profile }}" placeholder="Your full name">
+        </div>
+        <div class="col-md-6">
+          <label class="field-caption">School / College name</label>
+          <input name="school" class="form-control" value="{{ profile.school if profile }}" placeholder="e.g. St. Mary's High School">
+        </div>
+
+        <!-- Single dynamic selector: school grades OR college streams -->
+        <div class="col-md-4">
+          <label class="field-caption" id="gradeStreamLabel">Grade / Class</label>
+          <select name="grade" id="gradeSelect" class="form-select" onchange="updateSubjects()">
+            <option value="">Select...</option>
+          </select>
+        </div>
+
+        <!-- Section — label changes by type -->
+        <div class="col-md-4">
+          <label class="field-caption" id="sectionLabel">Section</label>
+          <input id="sectionInput" name="section" class="form-control"
+                 value="{{ profile.section if profile }}"
+                 placeholder="e.g. A, B, C">
+        </div>
+
+        <!-- College-only: Department / Specialization -->
+        <div class="col-md-4 college-field">
+          <label class="field-caption">Department / Specialization</label>
+          <input name="department" class="form-control" value="{{ profile.department if profile }}" placeholder="e.g. CS, Mechanical, Finance">
+        </div>
+      </div>
+
+      <!-- School-only board picker -->
+      <div class="mt-4 school-field">
+        <label class="field-caption d-block mb-3">Board / Curriculum</label>
+        <div class="board-pills">
+          {% for b in ['CBSE', 'ICSE', 'State Board', 'IB', 'IGCSE', 'Other'] %}
+          <input type="radio" name="board" id="board_{{ loop.index }}" value="{{ b }}" class="board-opt"
+                 {% if profile and profile.board == b %}checked{% endif %}>
+          <label for="board_{{ loop.index }}" class="board-label">{{ b }}</label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Contact & Reminders ── -->
+    <div class="shell-card profile-section mb-4">
+      <h5><span class="section-icon icon-lock">📧</span>Contact & Reminders</h5>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="field-caption">Your email</label>
+          <input type="email" name="email" class="form-control"
+                 value="{{ user.email if user }}" placeholder="you@example.com">
+          <small class="text-muted">Receives your own study reminders.</small>
+        </div>
+        <div class="col-md-6 school-field">
+          <label class="field-caption">Parent / Guardian email</label>
+          <input type="email" name="parent_email" class="form-control"
+                 value="{{ profile.parent_email if profile }}" placeholder="parent@example.com">
+          <small class="text-muted">Parent also receives automatic reminders (optional).</small>
+        </div>
+        <div class="col-md-6 school-field">
+          <label class="field-caption">Parent / Guardian phone</label>
+          <input type="text" name="parent_phone" class="form-control"
+                 value="{{ profile.parent_phone if profile }}" placeholder="+911234567890">
+          <small class="text-muted">Used for weekly test result SMS notifications.</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Subjects ── -->
+    <div class="shell-card profile-section mb-4">
+      <h5><span class="section-icon icon-book">📚</span>Subjects</h5>
+      <p class="text-muted mb-3 school-field" style="margin-bottom:0!important;">Subject list updates automatically when you change your grade.</p>
+      <p class="text-muted mb-3 college-field" style="margin-bottom:0!important;">Select the subjects / modules you are currently studying.</p>
+      <div class="subjects-grid mt-3" id="subjectsGrid">
+        {% for subj in subjects %}
+        <label class="subj-check">
+          <input type="checkbox" name="subjects" value="{{ subj }}"
+                 {% if profile and subj in (profile.subjects or '') %}checked{% endif %}>
+          <span class="dot"></span>
+          <span>{{ subj }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ── Daily goal ── -->
+    <div class="shell-card profile-section mb-4">
+      <h5><span class="section-icon icon-goal">🎯</span>Daily Study Goal</h5>
+      <div class="row align-items-center g-3">
+        <div class="col-md-4">
+          <label class="field-caption">Minutes per day</label>
+             <input type="number" name="daily_goal" class="form-control" min="30" max="600"
+                 value="{{ profile.daily_goal if profile else 60 }}">
+        </div>
+        <div class="col-md-8 text-muted pt-3" style="font-size:0.95rem;">
+          Reminders and streak tracking use this target. Minimum allowed is 30 minutes.
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-brand btn-lg px-5">Save Profile</button>
+
+  </form>
+  {% endif %}
+</div>
+
+{% if not is_teacher %}
+<script>
+  const schoolGrades       = {{ all_grades | tojson | safe }};
+  const collegeStreams      = {{ college_streams | tojson | safe }};
+  const schoolSubjectsByGrade   = {{ school_subjects_by_grade | tojson | safe }};
+  const schoolSubjectsDefault   = {{ school_subjects_default | tojson | safe }};
+  const collegeSubjectsByStream = {{ college_subjects_by_stream | tojson | safe }};
+  const collegeSubjectsDefault  = {{ college_subjects | tojson | safe }};
+  const savedGrade   = {{ (profile.grade or '') | tojson | safe }};
+  const savedSubjs   = {{ (profile.subjects or '') | tojson | safe }}
+                        .split(',').map(s => s.trim()).filter(Boolean);
+
+  /* ------ render checkboxes ------ */
+  function renderSubjects(list) {
+    const grid = document.getElementById('subjectsGrid');
+    grid.innerHTML = '';
+    list.forEach(subj => {
+      const checked = savedSubjs.includes(subj) ? 'checked' : '';
+      grid.innerHTML += `
+        <label class="subj-check">
+          <input type="checkbox" name="subjects" value="${subj}" ${checked}>
+          <span class="dot"></span>
+          <span>${subj}</span>
+        </label>`;
+    });
+  }
+
+  /* ------ populate grade/stream dropdown ------ */
+  function populateGradeSelect(isSchool) {
+    const sel   = document.getElementById('gradeSelect');
+    const label = document.getElementById('gradeStreamLabel');
+    if (isSchool) {
+      label.textContent = 'Grade / Class';
+      sel.innerHTML = '<option value="">Select grade…</option>';
+      schoolGrades.forEach(g => {
+        const sel_ = (g === savedGrade) ? 'selected' : '';
+        sel.innerHTML += `<option value="${g}" ${sel_}>Grade ${g}</option>`;
+      });
+    } else {
+      label.textContent = 'College Stream';
+      sel.innerHTML = '<option value="">Select stream…</option>';
+      collegeStreams.forEach(s => {
+        const sel_ = (s === savedGrade) ? 'selected' : '';
+        sel.innerHTML += `<option value="${s}" ${sel_}>${s}</option>`;
+      });
+    }
+  }
+
+  /* ------ update subjects based on current type & grade/stream ------ */
+  function updateSubjects() {
+    const isSchool = document.getElementById('type_school').checked;
+    const grade    = document.getElementById('gradeSelect').value;
+    if (!isSchool) {
+      renderSubjects(grade && collegeSubjectsByStream[grade]
+        ? collegeSubjectsByStream[grade]
+        : collegeSubjectsDefault);
+      return;
+    }
+    if (!grade) { renderSubjects(schoolSubjectsDefault); return; }
+    const parts = grade.toLowerCase().split(' ');
+    const num   = parseInt(parts[0]);
+    let key = null;
+    if      (num <= 5)             key = '1-5';
+    else if (num <= 8)             key = '6-8';
+    else if (num <= 10)            key = '9-10';
+    else if (parts.includes('commerce')) key = '11-12 Commerce';
+    else if (parts.includes('arts'))     key = '11-12 Arts';
+    else                                  key = '11-12 Science';
+    renderSubjects(schoolSubjectsByGrade[key] || schoolSubjectsDefault);
+  }
+
+  /* ------ switch between school / college mode ------ */
+  function onTypeChange() {
+    const isSchool = document.getElementById('type_school').checked;
+    const nextType = isSchool ? 'school' : 'college';
+
+    if (typeof window.setUserType === 'function') {
+      window.setUserType(nextType);
+    } else {
+      localStorage.setItem('userType', nextType);
+      console.log('User Type:', nextType);
+      window.dispatchEvent(new CustomEvent('app-user-type-changed', { detail: { userType: nextType } }));
+    }
+
+    document.querySelectorAll('.school-field').forEach(el => {
+      el.style.display = isSchool ? '' : 'none';
+    });
+    document.querySelectorAll('.college-field').forEach(el => {
+      el.style.display = isSchool ? 'none' : '';
+    });
+
+    // Update section label & placeholder
+    const sectionLabel = document.getElementById('sectionLabel');
+    const sectionInput = document.getElementById('sectionInput');
+    if (sectionLabel) sectionLabel.textContent = isSchool ? 'Section' : 'Year / Semester';
+    if (sectionInput) sectionInput.placeholder  = isSchool ? 'e.g. A, B, C' : 'e.g. 3rd Year / Sem 5';
+
+    // Enable board options only for school students.
+    document.querySelectorAll('input[name="board"]').forEach(opt => {
+      opt.disabled = !isSchool;
+      if (!isSchool) {
+        opt.checked = false;
+      }
+    });
+
+    // Repopulate grade/stream dropdown and refresh subjects
+    populateGradeSelect(isSchool);
+    updateSubjects();
+  }
+
+  // Apply saved state on page load
+  if (typeof window.setUserType === 'function') {
+    const initialType = document.getElementById('type_school').checked ? 'school' : 'college';
+    window.setUserType(initialType);
+  }
+  onTypeChange();
+</script>
+{% endif %}
 {% endblock %}

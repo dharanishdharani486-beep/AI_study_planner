@@ -1,47 +1,238 @@
 ﻿{% extends 'base.html' %}
-{% block content %}
+{% block body_class %}page-auth{% endblock %}
+{% block page_styles %}
 <style>
-.login-bg {
-  min-height: 80vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #2a95ff 0%, #2964f5 56%, #1a3d8b 100%);
-  color: #ffffff;
-}
-.card-login {
-  width: 100%;
-  max-width: 430px;
-  border-radius: 14px;
-  box-shadow: 0 18px 46px rgba(1, 50, 115, 0.35);
-  backdrop-filter: blur(6px);
-}
-.card-login .form-label { color: #4f87d6; font-weight: 600; }
-.card-login .btn-brand { background: #004ee2; border: none; }
-</style>
+  .auth-stage {
+    display: grid;
+    grid-template-columns: 1.08fr 0.92fr;
+    gap: 24px;
+    align-items: stretch;
+  }
 
-<div class="login-bg">
-  <div class="card card-login p-4">
-    <div class="card-body">
-      <h3 class="card-title text-center mb-3">Welcome back</h3>
-      <p class="text-center text-muted mb-4">Log in to access your study dashboard and progress analytics</p>
+  .auth-story,
+  .auth-panel {
+    position: relative;
+    overflow: hidden;
+    min-height: 72vh;
+  }
+
+  .auth-story {
+    padding: 42px;
+    color: #f6fbff;
+    background:
+      linear-gradient(145deg, rgba(11, 42, 68, 0.94), rgba(11, 94, 80, 0.88)),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
+  }
+
+  .auth-story::before,
+  .auth-story::after {
+    content: '';
+    position: absolute;
+    border-radius: 999px;
+  }
+
+  .auth-story::before {
+    width: 220px;
+    height: 220px;
+    top: -40px;
+    right: -50px;
+    background: rgba(255, 209, 111, 0.22);
+  }
+
+  .auth-story::after {
+    width: 180px;
+    height: 180px;
+    bottom: 20px;
+    left: -40px;
+    background: rgba(255, 133, 82, 0.18);
+  }
+
+  .auth-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 0.9rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .auth-story h1 {
+    margin: 22px 0 14px;
+    max-width: 10ch;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(2.6rem, 5vw, 4.5rem);
+    line-height: 0.95;
+    letter-spacing: -0.06em;
+  }
+
+  .auth-story p {
+    max-width: 560px;
+    color: rgba(246, 251, 255, 0.8);
+    font-size: 1.05rem;
+  }
+
+  .auth-strip {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 30px;
+  }
+
+  .auth-stat {
+    padding: 18px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+  }
+
+  .auth-stat strong {
+    display: block;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.5rem;
+  }
+
+  .auth-panel {
+    padding: 18px;
+    background: rgba(255, 255, 255, 0.46);
+  }
+
+  .auth-card {
+    height: 100%;
+    padding: 34px;
+  }
+
+  .auth-card h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2rem;
+    letter-spacing: -0.05em;
+  }
+
+  .auth-card .hint {
+    color: var(--muted);
+  }
+
+  .auth-links {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.95rem;
+  }
+
+  .auth-links a {
+    text-decoration: none;
+    color: var(--brand-deep);
+    font-weight: 700;
+  }
+
+  .field-caption {
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #24435f;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  @media (max-width: 991px) {
+    .auth-stage {
+      grid-template-columns: 1fr;
+    }
+
+    .auth-story,
+    .auth-panel {
+      min-height: auto;
+    }
+
+    .auth-strip {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="auth-stage">
+  <section class="auth-story shell-card">
+    <div class="auth-kicker">Daily focus system</div>
+    <h1>Build a calm study rhythm.</h1>
+    <p>Track study time, collect AI help, and let the planner handle reminders in the background. The interface is designed like a personal study control room, not a generic admin panel.</p>
+    <div class="auth-strip">
+      <div class="auth-stat">
+        <strong>Focus</strong>
+        <span>Plan subject blocks with less friction.</span>
+      </div>
+      <div class="auth-stat">
+        <strong>Recall</strong>
+        <span>Generate topics and notes when revision stalls.</span>
+      </div>
+      <div class="auth-stat">
+        <strong>Flow</strong>
+        <span>Keep momentum visible through streaks and time logs.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="auth-panel shell-card">
+    <div class="auth-card shell-card">
+      <p class="field-caption mb-2">Member login</p>
+      <h2 class="mb-2">Welcome back</h2>
+      <p class="hint mb-4">Sign in to reach your dashboard, planner, and AI study tools.</p>
 
       <form method="post" novalidate>
         <div class="mb-3">
-          <label class="form-label" for="username">Username</label>
+          <label class="field-caption" for="username">Username</label>
           <input id="username" name="username" class="form-control" placeholder="Enter your username" required>
         </div>
-        <div class="mb-3">
-          <label class="form-label" for="password">Password</label>
+        <div class="mb-4">
+          <label class="field-caption" for="password">Password</label>
           <input id="password" type="password" name="password" class="form-control" placeholder="Enter your password" required>
+          <small class="text-muted d-block mt-2">
+            <a href="{{ url_for('forgot_password') }}" style="color: #0056b3; text-decoration: none;">Forgot your password?</a>
+          </small>
         </div>
-        <div class="d-flex justify-content-between align-items-center mb-4">
-          <small><a class="link-light" href="#">Forgot password?</a></small>
-          <a class="link-light" href="{{ url_for('signup') }}">Create account</a>
+        <div class="auth-links mb-4">
+          <span class="text-muted">New here?</span>
+          <a href="{{ url_for('signup') }}">Create account</a>
         </div>
-        <button class="btn btn-brand btn-lg w-100 text-white">Sign In</button>
+        <button class="btn btn-brand btn-lg w-100">Enter dashboard</button>
       </form>
     </div>
-  </div>
+  </section>
 </div>
+
+<script>
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('logged_out') !== '1') {
+      return;
+    }
+
+    const keysToRemove = [
+      'userType',
+      'focus_selected_subject_v1',
+      'focus_selected_topic_v1',
+      'focus_notes_session_active_v1',
+      'focus_active_session_v1',
+      'focus_pending_completion_v1'
+    ];
+
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+    sessionStorage.removeItem('focus_selected_subject_v1');
+    sessionStorage.removeItem('focus_selected_topic_v1');
+    if (window.FocusTimer && typeof window.FocusTimer.stopSession === 'function') {
+      window.FocusTimer.stopSession();
+    }
+
+    try {
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    } catch (e) {
+      // no-op
+    }
+  })();
+</script>
 {% endblock %}
